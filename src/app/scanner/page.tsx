@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Camera, Upload, X, Loader2, Leaf, Info, AlertTriangle } from 'lucide-react';
+import { Camera, Upload, X, Loader2, Leaf, Info, AlertTriangle, Bug } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 
@@ -11,23 +11,76 @@ export default function PlantScanner() {
     const [image, setImage] = useState<string | null>(null);
     const [scanning, setScanning] = useState(false);
     const [flash, setFlash] = useState(false);
+    const [hasCameraError, setHasCameraError] = useState(false);
+
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const streamRef = useRef<MediaStream | null>(null);
+
     const [result, setResult] = useState<{
         name: string;
         scientificName: string;
         confidence: number;
         description: string;
         care: string[];
+        pests: string;
+        tips: string;
     } | null>(null);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const initializeCamera = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment' }
+            });
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+            }
+            streamRef.current = stream;
+        } catch (err) {
+            console.error("Error accessing camera: ", err);
+            setHasCameraError(true);
+        }
+    };
+
+    const stopCamera = () => {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+        }
+    };
+
+    useEffect(() => {
+        if (!image) {
+            initializeCamera();
+        }
+        return () => stopCamera();
+    }, [image]);
+
+    const handleCaptureFromCamera = () => {
+        if (videoRef.current && canvasRef.current) {
+            const context = canvasRef.current.getContext('2d');
+            if (context) {
+                canvasRef.current.width = videoRef.current.videoWidth;
+                canvasRef.current.height = videoRef.current.videoHeight;
+                context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
+                const imageDataUrl = canvasRef.current.toDataURL('image/jpeg');
+                setImage(imageDataUrl);
+                stopCamera();
+                startScan();
+            }
+        }
+    };
+
+    const handleCaptureFromFile = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {
                 setImage(reader.result as string);
                 setResult(null);
+                stopCamera();
                 startScan();
             };
             reader.readAsDataURL(file);
@@ -36,34 +89,56 @@ export default function PlantScanner() {
 
     const startScan = () => {
         setScanning(true);
+        // Simulate AI Processing Network Request
         setTimeout(() => {
             setScanning(false);
             setResult({
-                name: "Lavanda",
+                name: "Lavanda (Alfazeima)",
                 scientificName: "Lavandula angustifolia",
                 confidence: 0.95,
-                description: "Planta perene aromática, muito utilizada em jardins e para extração de óleos essenciais.",
+                description: "Planta perene aromática nativa do Mediterrâneo. Excelente para bordaduras e atrai polinizadores.",
                 care: [
                     "Sol pleno (mínimo 6h diárias)",
-                    "Solo bem drenado",
-                    "Rega moderada (evitar encharcamento)"
-                ]
+                    "Solo arenoso e muito bem drenado",
+                    "Rega escassa (deixe a terra secar completamente)"
+                ],
+                pests: "Pulgões nos brotos novos durante a primavera. Evite excesso de umidade para prevenir apodrecimento das raízes e fungos de folhagem.",
+                tips: "Pode drasticamente no final do inverno (antes da brotação) para manter um formato compacto e evitar que a base fique lenhosa e sem folhas."
             });
-        }, 2000);
+        }, 3000);
+    };
+
+    const handleRetakeOptions = () => {
+        setImage(null);
+        setResult(null);
+        initializeCamera();
     };
 
     return (
         <div className="relative flex h-[calc(100vh-80px)] w-full flex-col overflow-hidden bg-black font-display">
+            {/* Hidden canvas for image capture */}
+            <canvas ref={canvasRef} className="hidden" />
+
             {/* Camera View Background */}
-            <div className="absolute inset-0 z-0">
+            <div className="absolute inset-0 z-0 bg-black">
                 {image ? (
                     <img src={image} alt="Captured plant" className="w-full h-full object-cover" />
                 ) : (
-                    <img
-                        alt="Camera view of a plant"
-                        className="w-full h-full object-cover opacity-60"
-                        src="https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format&fit=crop&q=80&w=800"
-                    />
+                    hasCameraError ? (
+                        <div className="flex flex-col items-center justify-center w-full h-full text-slate-400 p-8 text-center bg-slate-900 border-2 border-dashed border-slate-700 m-auto">
+                            <AlertTriangle className="w-12 h-12 mb-4 text-slate-500" />
+                            <p>Não foi possível acessar a câmera.</p>
+                            <p className="text-sm mt-2">Permita o acesso no navegador ou faça upload da galeria.</p>
+                        </div>
+                    ) : (
+                        <video
+                            ref={videoRef}
+                            autoPlay
+                            playsInline
+                            muted
+                            className={cn("w-full h-full object-cover", flash && "brightness-125")}
+                        />
+                    )
                 )}
 
                 {/* Scanning Overlay Grid */}
@@ -86,9 +161,9 @@ export default function PlantScanner() {
             </div>
 
             {/* Top App Bar */}
-            <div className="relative z-10 flex items-center p-4 pb-2 justify-between bg-gradient-to-b from-black/60 to-transparent">
+            <div className="relative z-10 flex items-center p-4 pb-2 justify-between bg-gradient-to-b from-black/80 to-transparent">
                 <button
-                    onClick={() => { setImage(null); setResult(null); router.back(); }}
+                    onClick={() => { handleRetakeOptions(); router.back(); }}
                     className="flex size-12 shrink-0 items-center justify-center text-white hover:bg-white/20 rounded-full transition-colors"
                 >
                     <span className="material-symbols-outlined text-2xl">close</span>
@@ -105,32 +180,36 @@ export default function PlantScanner() {
 
             {/* Bottom Controls */}
             {!result && (
-                <div className="relative z-10 pb-8 pt-4 px-6 bg-gradient-to-t from-black/80 via-black/60 to-transparent flex flex-col items-center">
+                <div className="relative z-10 pb-8 pt-4 px-6 bg-gradient-to-t from-black/90 via-black/70 to-transparent flex flex-col items-center">
                     <div className="flex items-center justify-between w-full mb-8">
-                        <button onClick={() => router.push('/gallery')} className="flex shrink-0 items-center justify-center rounded-full size-12 bg-black/40 text-white backdrop-blur-sm border border-white/20 overflow-hidden hover:bg-white/20 transition-colors">
-                            <img
-                                alt="Thumbnail"
-                                className="w-full h-full object-cover"
-                                src="https://images.unsplash.com/photo-1501004318641-729e4b2a46e7?auto=format&fit=crop&q=80&w=150"
-                            />
+                        <button onClick={() => fileInputRef.current?.click()} className="flex shrink-0 items-center justify-center rounded-full size-12 bg-white/10 text-white backdrop-blur-md border border-white/30 overflow-hidden hover:bg-white/20 transition-colors">
+                            <span className="material-symbols-outlined text-[26px]">photo_library</span>
                         </button>
-                        <button
-                            onClick={() => fileInputRef.current?.click()}
-                            className="flex shrink-0 items-center justify-center rounded-full size-20 border-4 border-white text-white shadow-lg relative active:scale-95 transition-transform"
-                        >
-                            <div className="absolute inset-1 rounded-full bg-white opacity-80"></div>
-                        </button>
-                        <button onClick={() => setFlash(!flash)} className={cn("flex shrink-0 items-center justify-center rounded-full size-12 backdrop-blur-sm border transition-colors", flash ? "bg-white text-black border-white" : "bg-black/40 text-white border-white/20")}>
+
+                        {scanning ? (
+                            <div className="flex shrink-0 items-center justify-center rounded-full size-20 border-4 border-primary text-primary shadow-[0_0_15px_rgba(19,236,19,0.5)]">
+                                <Loader2 className="w-8 h-8 animate-spin" />
+                            </div>
+                        ) : (
+                            <button
+                                onClick={handleCaptureFromCamera}
+                                disabled={hasCameraError}
+                                className="flex shrink-0 items-center justify-center rounded-full size-20 border-4 border-white text-white shadow-lg relative active:scale-95 transition-transform disabled:opacity-50"
+                            >
+                                <div className="absolute inset-1 rounded-full bg-white opacity-80 backdrop-blur-sm"></div>
+                            </button>
+                        )}
+                        <button onClick={() => setFlash(!flash)} className={cn("flex shrink-0 items-center justify-center rounded-full size-12 backdrop-blur-md border transition-colors", flash ? "bg-white text-black border-white" : "bg-white/10 text-white border-white/30")}>
                             <span className="material-symbols-outlined text-2xl">flash_on</span>
                         </button>
                     </div>
+                    {scanning && <p className="text-white font-medium text-sm animate-pulse">Analisando imagem via Inteligência Artificial...</p>}
                     <input
                         type="file"
                         accept="image/*"
-                        capture="environment"
                         className="hidden"
                         ref={fileInputRef}
-                        onChange={handleCapture}
+                        onChange={handleCaptureFromFile}
                     />
                 </div>
             )}
@@ -171,14 +250,38 @@ export default function PlantScanner() {
                                         Saudável
                                     </div>
                                 </div>
+                                <div className="h-px w-full bg-slate-100 dark:bg-slate-800"></div>
+                                <div className="pt-2 text-sm text-slate-700 dark:text-slate-300 border-b border-dashed border-slate-200 dark:border-slate-700 pb-3">
+                                    <p className="font-bold flex items-center gap-2 mb-2 text-slate-900 dark:text-slate-100">
+                                        <Leaf className="w-4 h-4 text-primary" />
+                                        Cuidados Recomendados
+                                    </p>
+                                    <ul className="list-disc pl-5 space-y-1">
+                                        {result.care.map((c, i) => <li key={i}>{c}</li>)}
+                                    </ul>
+                                </div>
+                                <div className="pt-2 text-sm text-yellow-800 dark:text-yellow-200 bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg flex items-start gap-2">
+                                    <Bug className="w-5 h-5 shrink-0 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+                                    <div>
+                                        <p className="font-bold mb-1">Pragas & Doenças</p>
+                                        <p>{result.pests}</p>
+                                    </div>
+                                </div>
+                                <div className="pt-2 text-sm text-primary p-3 bg-primary/5 rounded-lg border border-primary/10">
+                                    <p className="font-bold shrink-0 mb-1 flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-base">tips_and_updates</span>
+                                        Dica de Especialista
+                                    </p>
+                                    <p className="text-slate-700 dark:text-slate-300">{result.tips}</p>
+                                </div>
                             </div>
 
                             <div className="mt-4 flex gap-3">
-                                <button onClick={() => { alert('Planta adicionada com sucesso aos registros.'); router.push('/clients'); }} className="flex-1 bg-primary text-slate-900 font-bold py-3.5 rounded-xl text-center shadow-lg shadow-primary/20 active:scale-95 transition-transform">
-                                    Adicionar ao CRM
+                                <button onClick={() => handleRetakeOptions()} className="w-14 bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold py-3.5 rounded-xl text-center flex items-center justify-center active:scale-95 transition-transform hover:bg-slate-300 dark:hover:bg-slate-700">
+                                    <span className="material-symbols-outlined">replay</span>
                                 </button>
-                                <button onClick={() => alert('Opções de compartilhamento')} className="w-14 bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold py-3.5 rounded-xl text-center flex items-center justify-center active:scale-95 transition-transform hover:bg-slate-300 dark:hover:bg-slate-700">
-                                    <span className="material-symbols-outlined">share</span>
+                                <button onClick={() => { alert('Diagnóstico salvo no perfil do cliente/jardim.'); router.push('/clients'); }} className="flex-1 bg-primary text-slate-900 font-bold py-3.5 rounded-xl text-center shadow-lg shadow-primary/20 active:scale-95 transition-transform">
+                                    Salvar Diagnóstico
                                 </button>
                             </div>
                         </div>

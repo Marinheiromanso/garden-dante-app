@@ -5,6 +5,11 @@ import { useRouter } from 'next/navigation';
 import { Calendar as CalendarIcon, Scissors, ChevronLeft, ChevronRight, Plus, Info, AlertTriangle, CheckCircle2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// Helper for 'YYYY-MM-DD'
+const formatDateString = (date: Date) => {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+
 const days = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 const currentMonth = 'Junho 2024';
 
@@ -12,22 +17,45 @@ export default function PruningSchedule() {
     const router = useRouter();
     const [isMounted, setIsMounted] = useState(false);
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [selectedDay, setSelectedDay] = useState<number>(new Date().getDate());
+    const [selectedDate, setSelectedDate] = useState(new Date());
 
-    // Task State
-    const [tasks, setTasks] = useState([
-        { id: '1', day: new Date().getDate(), client: 'João Silva', address: 'Rua das Flores, 123', service: 'Poda de Roseiras', time: '09:00 - 10:30', status: 'Pendente', icon: 'local_florist' },
-        { id: '2', day: new Date().getDate(), client: 'Maria Oliveira', address: 'Av. Brasil, 456', service: 'Corte de Grama', time: '11:00 - 13:00', status: 'Pendente', icon: 'grass' },
-    ]);
+    // Default demo tasks
+    const defaultTasks = [
+        { id: '1', dateString: formatDateString(new Date()), client: 'João Silva', address: 'Rua das Flores, 123', service: 'Poda de Roseiras', time: '09:00', status: 'Pendente', icon: 'local_florist' },
+        { id: '2', dateString: formatDateString(new Date()), client: 'Maria Oliveira', address: 'Av. Brasil, 456', service: 'Corte de Grama', time: '11:00', status: 'Pendente', icon: 'grass' },
+    ];
+
+    // Task State — load from localStorage
+    const [tasks, setTasks] = useState(defaultTasks);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isDayOptionsOpen, setIsDayOptionsOpen] = useState(false);
     const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
     const [formData, setFormData] = useState({ client: '', address: '', service: '', time: '' });
 
     useEffect(() => {
         setIsMounted(true);
         setCurrentDate(new Date());
-        setSelectedDay(new Date().getDate());
+        setSelectedDate(new Date());
+        // Load tasks from localStorage
+        try {
+            const stored = localStorage.getItem('gardenDanteTasks');
+            if (stored) {
+                setTasks(JSON.parse(stored));
+            } else {
+                // First time: save defaults
+                localStorage.setItem('gardenDanteTasks', JSON.stringify(defaultTasks));
+            }
+        } catch (e) {
+            console.warn('Failed to load tasks from localStorage', e);
+        }
     }, []);
+
+    // Persist tasks to localStorage whenever they change
+    useEffect(() => {
+        if (isMounted) {
+            localStorage.setItem('gardenDanteTasks', JSON.stringify(tasks));
+        }
+    }, [tasks, isMounted]);
 
     const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
@@ -55,6 +83,7 @@ export default function PruningSchedule() {
             setEditingTaskId(null);
             setFormData({ client: '', address: '', service: '', time: '08:00' });
         }
+        setIsDayOptionsOpen(false); // Close day options if open
         setIsModalOpen(true);
     };
 
@@ -63,9 +92,17 @@ export default function PruningSchedule() {
         if (editingTaskId) {
             setTasks(tasks.map(t => t.id === editingTaskId ? { ...t, ...formData } : t));
         } else {
-            setTasks([...tasks, { id: Date.now().toString(), day: selectedDay, ...formData, status: 'Pendente', icon: 'park' }]);
+            setTasks([...tasks, { id: Date.now().toString(), dateString: formatDateString(selectedDate), ...formData, status: 'Pendente', icon: 'park' }]);
         }
         setIsModalOpen(false);
+    };
+
+    const handleDeleteTask = (id: string, e: React.MouseEvent) => {
+        e.preventDefault();
+        if (confirm('Tem certeza que deseja excluir este serviço?')) {
+            setTasks(tasks.filter(t => t.id !== id));
+            setIsModalOpen(false);
+        }
     };
 
     const toggleTaskStatus = (id: string, e: React.MouseEvent) => {
@@ -73,7 +110,7 @@ export default function PruningSchedule() {
         setTasks(tasks.map(t => t.id === id ? { ...t, status: t.status === 'Pendente' ? 'Concluído' : 'Pendente' } : t));
     };
 
-    const currentTasks = tasks.filter(t => t.day === selectedDay);
+    const currentTasks = tasks.filter(t => t.dateString === formatDateString(selectedDate));
 
     return (
         <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 overflow-x-hidden w-full h-auto">
@@ -82,7 +119,13 @@ export default function PruningSchedule() {
                 <button onClick={() => router.back()} className="flex size-12 shrink-0 items-center justify-center mt-2 ml-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-900 dark:text-slate-100">
                     <span className="material-symbols-outlined text-2xl">arrow_back</span>
                 </button>
-                <h2 className="text-lg font-bold leading-tight flex-1 text-center pr-12">Agenda de Podas</h2>
+                <h2 className="text-lg font-bold leading-tight flex-1 text-center">Agenda de Podas</h2>
+                <button onClick={() => {
+                    const tasksData = currentTasks.map(t => ({ id: t.id, client: t.client, address: t.address }));
+                    router.push(`/routes?tasks=${encodeURIComponent(JSON.stringify(tasksData))}`);
+                }} className="flex size-12 shrink-0 items-center justify-center mt-2 mr-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-primary">
+                    <span className="material-symbols-outlined text-2xl">route</span>
+                </button>
             </div>
 
             <div className="flex flex-col flex-1 pb-20">
@@ -108,12 +151,16 @@ export default function PruningSchedule() {
                             {Array.from({ length: firstDayOfMonth }).map((_, i) => <div key={`empty-${i}`} />)}
                             {Array.from({ length: daysInMonth }).map((_, i) => {
                                 const day = i + 1;
-                                const isSelected = day === selectedDay;
-                                const isActualToday = isCurrentMonthView && day === today;
+                                const dateOfCell = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+                                const isSelected = formatDateString(dateOfCell) === formatDateString(selectedDate);
+                                const isActualToday = formatDateString(dateOfCell) === formatDateString(new Date());
                                 return (
                                     <button
                                         key={`day-${day}`}
-                                        onClick={() => setSelectedDay(day)}
+                                        onClick={() => {
+                                            setSelectedDate(dateOfCell);
+                                            setIsDayOptionsOpen(true);
+                                        }}
                                         className={cn(
                                             "h-10 w-full text-sm flex items-center justify-center rounded-full transition-all relative",
                                             isSelected
@@ -133,7 +180,7 @@ export default function PruningSchedule() {
                 </div>
 
                 <div className="flex items-center justify-between px-4 pb-2 pt-4">
-                    <h3 className="text-lg font-bold leading-tight">Tarefas do dia {selectedDay}</h3>
+                    <h3 className="text-lg font-bold leading-tight">Tarefas do dia {selectedDate.getDate()}</h3>
                     <button onClick={() => handleOpenModal()} className="flex items-center gap-1 bg-primary/20 text-primary px-3 py-1.5 rounded-full text-sm font-bold hover:bg-primary/30 transition-colors">
                         <Plus className="w-4 h-4" />
                         Adicionar
@@ -191,9 +238,39 @@ export default function PruningSchedule() {
                 </div>
             </div>
 
-            {/* Modal */}
+            {/* Day Options Bottom Sheet */}
+            {isDayOptionsOpen && (
+                <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end justify-center p-4 pb-8">
+                    <div className="bg-background-light dark:bg-[#152e15] border border-primary/20 w-full max-w-md rounded-2xl shadow-xl flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300">
+                        <div className="flex items-center justify-between p-4 border-b border-primary/10 bg-primary/5">
+                            <h2 className="text-xl font-bold">Agenda • {selectedDate.getDate()} de {monthName.split(' ')[0]}</h2>
+                            <button onClick={() => setIsDayOptionsOpen(false)} className="rounded-full p-2 hover:bg-primary/10 transition-colors">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-4 flex flex-col gap-3">
+                            <button
+                                onClick={(e) => handleOpenModal(undefined, e)}
+                                className="w-full bg-primary text-background-dark font-bold text-lg rounded-xl py-4 flex items-center justify-center gap-2 hover:scale-[0.98] transition-all shadow-lg shadow-primary/20"
+                            >
+                                <Plus className="w-6 h-6" />
+                                Adicionar Novo Serviço
+                            </button>
+                            <button
+                                onClick={() => setIsDayOptionsOpen(false)}
+                                className="w-full bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold text-lg rounded-xl py-4 flex items-center justify-center gap-2 hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors"
+                            >
+                                <CalendarIcon className="w-6 h-6" />
+                                Ver Serviços Agendados ({currentTasks.length})
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Editing/Adding Service Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 bg-background-dark/80 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-background-light dark:bg-[#152e15] border border-primary/20 w-full max-w-md rounded-2xl shadow-xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                         <div className="flex items-center justify-between p-4 border-b border-primary/10">
                             <h2 className="text-lg font-bold">{editingTaskId ? 'Editar Serviço' : 'Novo Serviço'}</h2>
@@ -218,9 +295,16 @@ export default function PruningSchedule() {
                                 <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Horário</label>
                                 <input required type="time" value={formData.time} onChange={e => setFormData({ ...formData, time: e.target.value })} className="w-full bg-slate-100 dark:bg-[#193319] border border-primary/20 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary" />
                             </div>
-                            <button type="submit" className="w-full bg-primary text-background-dark font-bold text-lg rounded-xl mt-4 py-3.5 hover:scale-[0.98] transition-transform shadow-lg shadow-primary/20">
-                                Salvar Agenda
-                            </button>
+                            <div className="flex flex-col gap-2 mt-4">
+                                <button type="submit" className="w-full bg-primary text-background-dark font-bold text-lg rounded-xl py-3.5 hover:scale-[0.98] transition-transform shadow-lg shadow-primary/20">
+                                    Salvar Serviço
+                                </button>
+                                {editingTaskId && (
+                                    <button type="button" onClick={(e) => handleDeleteTask(editingTaskId, e)} className="w-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-bold text-base rounded-xl py-3 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors">
+                                        Excluir Serviço
+                                    </button>
+                                )}
+                            </div>
                         </form>
                     </div>
                 </div>

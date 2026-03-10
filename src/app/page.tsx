@@ -15,6 +15,35 @@ export default function Home() {
     error: false
   });
 
+  // Task state from localStorage
+  const [tasks, setTasks] = useState<any[]>([]);
+
+  const formatDateString = (date: Date) => {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
+
+  const todayString = formatDateString(new Date());
+  const todayTasks = tasks.filter(t => t.dateString === todayString);
+  const todayPendingTasks = todayTasks.filter(t => t.status !== 'Concluído');
+
+  // Load tasks from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('gardenDanteTasks');
+      if (stored) {
+        setTasks(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.warn('Failed to load tasks from localStorage', e);
+    }
+  }, []);
+
+  const handleMarkDone = (id: string) => {
+    const updated = tasks.map(t => t.id === id ? { ...t, status: 'Concluído' } : t);
+    setTasks(updated);
+    localStorage.setItem('gardenDanteTasks', JSON.stringify(updated));
+  };
+
   useEffect(() => {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -113,48 +142,43 @@ export default function Home() {
           </Link>
         </div>
 
-        {/* Next Pruning Services */}
+        {/* Next Pruning Services - Dynamic */}
         <div className="mt-6">
           <div className="flex items-center justify-between px-4 mb-3">
             <h3 className="text-lg font-bold">Próximos Serviços</h3>
             <Link href="/pruning" className="text-primary text-sm font-medium hover:underline">Ver Tudo</Link>
           </div>
           <div className="flex overflow-x-auto gap-4 px-4 pb-4 snap-x hide-scrollbar">
-            {/* Card 1 */}
-            <div className="flex-none w-72 rounded-xl bg-white dark:bg-[#152e15] p-4 shadow-sm border border-slate-200 dark:border-slate-800 snap-start flex flex-col gap-3">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded inline-block mb-1">Hoje, 10:00 AM</p>
-                  <p className="text-base font-bold">Alice Johnson</p>
-                </div>
-                <div className="size-8 rounded-full bg-slate-100 dark:bg-[#102210] flex items-center justify-center">
-                  <span className="material-symbols-outlined text-sm text-slate-500">content_cut</span>
-                </div>
+            {todayPendingTasks.length === 0 ? (
+              <div className="flex-none w-full rounded-xl bg-white dark:bg-[#152e15] p-6 shadow-sm border border-slate-200 dark:border-slate-800 text-center">
+                <span className="material-symbols-outlined text-4xl text-primary/30 mb-2">event_available</span>
+                <p className="text-sm opacity-70 mt-2">Nenhum serviço pendente para hoje.</p>
+                <Link href="/pruning" className="text-primary text-sm font-bold mt-2 inline-block hover:underline">Agendar Serviço →</Link>
               </div>
-              <p className="text-sm opacity-80 line-clamp-1">Roseiras, Hortênsias</p>
-              <div
-                className="h-24 w-full bg-center bg-no-repeat bg-cover rounded-lg"
-                style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1496062031456-07b8f162a322?auto=format&fit=crop&q=80&w=300&h=150")' }}
-              ></div>
-            </div>
-
-            {/* Card 2 */}
-            <div className="flex-none w-72 rounded-xl bg-white dark:bg-[#152e15] p-4 shadow-sm border border-slate-200 dark:border-slate-800 snap-start flex flex-col gap-3">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-xs font-medium text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded inline-block mb-1">Hoje, 14:30 PM</p>
-                  <p className="text-base font-bold">Smith Estate</p>
+            ) : (
+              todayPendingTasks.map((task) => (
+                <div key={task.id} className="flex-none w-72 rounded-xl bg-white dark:bg-[#152e15] p-4 shadow-sm border border-slate-200 dark:border-slate-800 snap-start flex flex-col gap-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded inline-block mb-1">Hoje, {task.time}</p>
+                      <p className="text-base font-bold">{task.client}</p>
+                    </div>
+                    <button
+                      onClick={() => handleMarkDone(task.id)}
+                      className="size-8 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors active:scale-90 cursor-pointer"
+                      title="Marcar como concluído"
+                    >
+                      <span className="material-symbols-outlined text-sm text-primary">check_circle</span>
+                    </button>
+                  </div>
+                  <p className="text-sm opacity-80 line-clamp-1">{task.service}</p>
+                  <div className="flex items-center gap-1 text-xs opacity-60">
+                    <span className="material-symbols-outlined text-[12px]">location_on</span>
+                    {task.address}
+                  </div>
                 </div>
-                <div className="size-8 rounded-full bg-slate-100 dark:bg-[#102210] flex items-center justify-center">
-                  <span className="material-symbols-outlined text-sm text-slate-500">park</span>
-                </div>
-              </div>
-              <p className="text-sm opacity-80 line-clamp-1">Modelagem de Macieiras</p>
-              <div
-                className="h-24 w-full bg-center bg-no-repeat bg-cover rounded-lg"
-                style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1444858291040-58f756a3bea6?auto=format&fit=crop&q=80&w=300&h=150")' }}
-              ></div>
-            </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -166,40 +190,44 @@ export default function Home() {
           </Link>
         </div>
 
-        {/* Today's Schedule Summary */}
+        {/* Today's Schedule Summary - Dynamic */}
         <div className="mt-8 px-4 mb-4">
           <h3 className="text-lg font-bold mb-4">Agenda de Hoje</h3>
           <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-4 bg-white dark:bg-[#152e15] p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
-              <div className="flex flex-col items-center justify-center min-w-[50px]">
-                <span className="text-sm font-bold">10:00</span>
-                <span className="text-xs opacity-60">AM</span>
+            {todayTasks.length === 0 ? (
+              <div className="flex items-center gap-4 bg-white dark:bg-[#152e15] p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm text-center justify-center">
+                <span className="material-symbols-outlined text-2xl text-primary/30">calendar_today</span>
+                <p className="text-sm opacity-70">Agenda vazia para hoje.</p>
               </div>
-              <div className="w-px h-10 bg-slate-200 dark:bg-slate-700"></div>
-              <div className="flex-1">
-                <p className="font-semibold text-sm">Serviço de Poda</p>
-                <p className="text-xs opacity-70 flex items-center gap-1 mt-0.5">
-                  <span className="material-symbols-outlined text-[12px]">location_on</span>
-                  Alice Johnson
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 bg-white dark:bg-[#152e15] p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500"></div>
-              <div className="flex flex-col items-center justify-center min-w-[50px]">
-                <span className="text-sm font-bold">14:30</span>
-                <span className="text-xs opacity-60">PM</span>
-              </div>
-              <div className="w-px h-10 bg-slate-200 dark:bg-slate-700"></div>
-              <div className="flex-1">
-                <p className="font-semibold text-sm">Modelagem de Árvores</p>
-                <p className="text-xs opacity-70 flex items-center gap-1 mt-0.5">
-                  <span className="material-symbols-outlined text-[12px]">location_on</span>
-                  Smith Estate
-                </p>
-              </div>
-            </div>
+            ) : (
+              todayTasks.map((task) => (
+                <div key={task.id} className="flex items-center gap-4 bg-white dark:bg-[#152e15] p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+                  <div className={`absolute left-0 top-0 bottom-0 w-1 ${task.status === 'Concluído' ? 'bg-emerald-500' : 'bg-primary'}`}></div>
+                  <div className="flex flex-col items-center justify-center min-w-[50px]">
+                    <span className="text-sm font-bold">{task.time}</span>
+                  </div>
+                  <div className="w-px h-10 bg-slate-200 dark:bg-slate-700"></div>
+                  <div className="flex-1">
+                    <p className={`font-semibold text-sm ${task.status === 'Concluído' ? 'line-through opacity-50' : ''}`}>{task.service}</p>
+                    <p className="text-xs opacity-70 flex items-center gap-1 mt-0.5">
+                      <span className="material-symbols-outlined text-[12px]">location_on</span>
+                      {task.client}
+                    </p>
+                  </div>
+                  {task.status === 'Concluído' ? (
+                    <span className="material-symbols-outlined text-emerald-500 text-xl">check_circle</span>
+                  ) : (
+                    <button
+                      onClick={() => handleMarkDone(task.id)}
+                      className="size-8 rounded-full bg-primary/10 flex items-center shrink-0 justify-center hover:bg-primary/20 transition-colors active:scale-90 cursor-pointer"
+                      title="Marcar como concluído"
+                    >
+                      <span className="material-symbols-outlined text-sm text-primary">check</span>
+                    </button>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         </div>
       </main>
