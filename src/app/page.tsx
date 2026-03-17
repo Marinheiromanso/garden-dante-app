@@ -103,12 +103,12 @@ export default function Home() {
     <div className="flex flex-col min-h-screen">
       {/* Header */}
       <div className="flex items-center p-4 justify-between bg-white dark:bg-[#152e15] shadow-sm z-10 sticky top-0">
-        <div className="flex size-10 shrink-0 items-center">
+        <Link href="/profile" className="flex size-10 shrink-0 items-center">
           <div
             className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10"
             style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1541888946425-d81bb19480c5?auto=format&fit=crop&q=80&w=150&h=150")' }}
           ></div>
-        </div>
+        </Link>
         <h2 className="text-xl font-bold leading-tight flex-1 text-center">Dashboard</h2>
         <Link href="/reminders" className="size-10 flex items-center justify-center rounded-full bg-primary/10 text-primary cursor-pointer hover:bg-primary/20 transition-colors">
           <span className="material-symbols-outlined">notifications</span>
@@ -188,6 +188,49 @@ export default function Home() {
             <span className="material-symbols-outlined text-2xl">qr_code_scanner</span>
             <span className="text-lg font-bold">Scanner de Plantas</span>
           </Link>
+        </div>
+
+        {/* Quick Access Grid */}
+        <div className="mt-6 px-4">
+          <h3 className="text-lg font-bold mb-3">Acesso Rápido</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <Link href="/expenses" className="flex items-center gap-3 bg-white dark:bg-[#152e15] rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary/30 transition-all active:scale-[0.97]">
+              <div className="size-10 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-amber-500">account_balance_wallet</span>
+              </div>
+              <div>
+                <p className="text-sm font-bold">Despesas</p>
+                <p className="text-[10px] opacity-50">Controle financeiro</p>
+              </div>
+            </Link>
+            <Link href="/species" className="flex items-center gap-3 bg-white dark:bg-[#152e15] rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary/30 transition-all active:scale-[0.97]">
+              <div className="size-10 rounded-lg bg-lime-500/10 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-lime-500">menu_book</span>
+              </div>
+              <div>
+                <p className="text-sm font-bold">Espécies</p>
+                <p className="text-[10px] opacity-50">Biblioteca de plantas</p>
+              </div>
+            </Link>
+            <Link href="/health" className="flex items-center gap-3 bg-white dark:bg-[#152e15] rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary/30 transition-all active:scale-[0.97]">
+              <div className="size-10 rounded-lg bg-sky-500/10 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-sky-500">monitor_heart</span>
+              </div>
+              <div>
+                <p className="text-sm font-bold">Saúde</p>
+                <p className="text-[10px] opacity-50">Histórico de plantas</p>
+              </div>
+            </Link>
+            <Link href="/profile" className="flex items-center gap-3 bg-white dark:bg-[#152e15] rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary/30 transition-all active:scale-[0.97]">
+              <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-primary">badge</span>
+              </div>
+              <div>
+                <p className="text-sm font-bold">Perfil</p>
+                <p className="text-[10px] opacity-50">Portfólio profissional</p>
+              </div>
+            </Link>
+          </div>
         </div>
 
         {/* Today's Schedule Summary - Dynamic */}
