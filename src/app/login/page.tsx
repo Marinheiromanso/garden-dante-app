@@ -29,8 +29,14 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen bg-background-light dark:bg-background-dark font-display flex flex-col items-center justify-center p-6 bg-gradient-to-b from-primary/5 to-transparent">
-            <div className="w-full max-w-sm flex flex-col items-center gap-8">
+        <div className="min-h-screen bg-background-light dark:bg-background-dark font-display flex flex-col items-center justify-center p-6 relative overflow-hidden">
+            {/* Background Image */}
+            <div className="absolute inset-0 z-0">
+                <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=800&q=80")' }} />
+                <div className="absolute inset-0 bg-gradient-to-b from-background-dark/80 via-background-dark/90 to-background-dark" />
+            </div>
+
+            <div className="w-full max-w-sm flex flex-col items-center gap-8 relative z-10">
                 {/* Logo/Icon */}
                 <div className="size-20 bg-primary rounded-3xl flex items-center justify-center shadow-lg shadow-primary/30 rotate-3">
                     <span className="material-symbols-outlined text-4xl text-slate-900 font-bold -rotate-3">potted_plant</span>

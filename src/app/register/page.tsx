@@ -45,8 +45,14 @@ export default function RegisterPage() {
     };
 
     return (
-        <div className="min-h-screen bg-background-light dark:bg-background-dark font-display flex flex-col items-center justify-center p-6 bg-gradient-to-t from-primary/5 to-transparent overflow-y-auto pt-12 pb-12">
-            <div className="w-full max-w-sm flex flex-col items-center gap-6">
+        <div className="min-h-screen bg-background-light dark:bg-background-dark font-display flex flex-col items-center justify-center p-6 overflow-y-auto pt-12 pb-12 relative">
+            {/* Background Image */}
+            <div className="absolute inset-0 z-0">
+                <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80")' }} />
+                <div className="absolute inset-0 bg-gradient-to-t from-background-dark/95 via-background-dark/90 to-background-dark/80" />
+            </div>
+
+            <div className="w-full max-w-sm flex flex-col items-center gap-6 relative z-10">
                 {/* Icon */}
                 <div className="size-16 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30">
                     <span className="material-symbols-outlined text-3xl text-slate-900 font-bold">person_add</span>

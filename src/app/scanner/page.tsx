@@ -125,10 +125,14 @@ export default function PlantScanner() {
                     <img src={image} alt="Captured plant" className="w-full h-full object-cover" />
                 ) : (
                     hasCameraError ? (
-                        <div className="flex flex-col items-center justify-center w-full h-full text-slate-400 p-8 text-center bg-slate-900 border-2 border-dashed border-slate-700 m-auto">
-                            <AlertTriangle className="w-12 h-12 mb-4 text-slate-500" />
-                            <p>Não foi possível acessar a câmera.</p>
-                            <p className="text-sm mt-2">Permita o acesso no navegador ou faça upload da galeria.</p>
+                        <div className="flex flex-col items-center justify-center w-full h-full text-slate-400 p-8 text-center relative">
+                            <div className="absolute inset-0 bg-cover bg-center opacity-30" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1446071103084-c257b5f70672?w=600&q=80")' }} />
+                            <div className="absolute inset-0 bg-black/60" />
+                            <div className="relative z-10 flex flex-col items-center">
+                                <AlertTriangle className="w-12 h-12 mb-4 text-amber-400" />
+                                <p className="text-white font-bold text-lg">Câmera Indisponível</p>
+                                <p className="text-sm mt-2 text-slate-300">Permita o acesso no navegador ou faça upload da galeria.</p>
+                            </div>
                         </div>
                     ) : (
                         <video
@@ -224,13 +228,24 @@ export default function PlantScanner() {
                         >
                             <div className="h-1.5 w-12 rounded-full bg-slate-300 dark:bg-slate-700"></div>
                         </button>
-                        <div className="flex-1 px-4 pb-6">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="p-2 bg-primary/20 rounded-lg text-primary">
-                                    <span className="material-symbols-outlined text-2xl">psychiatry</span>
+
+                        {/* Hero image for identified plant */}
+                        <div className="relative h-40 mx-4 mt-2 rounded-xl overflow-hidden">
+                            <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url("https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?w=600&q=80")` }} />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                            <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">
+                                <div>
+                                    <p className="text-white/70 text-xs font-medium uppercase tracking-wider">Identificação Concluída</p>
+                                    <h3 className="text-white text-xl font-bold leading-tight">{result.name}</h3>
                                 </div>
-                                <h3 className="text-slate-900 dark:text-slate-100 text-xl font-bold leading-tight">Planta Identificada</h3>
+                                <div className="bg-primary/90 text-slate-900 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-sm">verified</span>
+                                    {Math.round(result.confidence * 100)}%
+                                </div>
                             </div>
+                        </div>
+
+                        <div className="flex-1 px-4 pb-6 pt-4">
 
                             <div className="bg-white dark:bg-slate-800/50 rounded-xl p-4 space-y-3 border border-slate-100 dark:border-slate-800">
                                 <div className="flex justify-between items-center gap-x-6 py-1">

@@ -15,6 +15,21 @@ export default function TermsPage() {
             </header>
 
             <main className="flex-1 w-full max-w-2xl mx-auto p-6 flex flex-col gap-8">
+                {/* Header Banner */}
+                <div className="rounded-2xl overflow-hidden relative h-36">
+                    <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1450778869180-e77b1b79ede5?w=600&q=80")' }} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-background-dark/90 via-background-dark/60 to-background-dark/30" />
+                    <div className="relative h-full flex items-end p-5">
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="material-symbols-outlined text-primary text-lg">description</span>
+                                <p className="text-xs text-primary font-bold uppercase tracking-wider">Garden Dante</p>
+                            </div>
+                            <h3 className="text-lg font-black text-slate-100">Termos e Condições de Uso</h3>
+                        </div>
+                    </div>
+                </div>
+
                 <section>
                     <h2 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
                         <span className="material-symbols-outlined">gavel</span>

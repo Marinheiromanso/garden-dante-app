@@ -129,6 +129,20 @@ export default function PruningSchedule() {
             </div>
 
             <div className="flex flex-col flex-1 pb-20">
+                {/* Season Banner */}
+                <div className="mx-4 mt-2 rounded-2xl overflow-hidden relative h-28">
+                    <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1598902108854-d1446c06ca89?w=600&q=80")' }} />
+                    <div className="absolute inset-0 bg-gradient-to-r from-background-dark/85 to-transparent" />
+                    <div className="relative h-full flex items-center p-5">
+                        <div>
+                            <p className="text-xs opacity-60 uppercase tracking-wider font-medium text-slate-100">
+                                {isMounted ? monthName : 'Carregando...'}
+                            </p>
+                            <h3 className="text-base font-black mt-1 text-slate-100">Organize seus serviços</h3>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Calendar Mini */}
                 <div className="flex flex-col gap-4 p-4">
                     <div className="flex items-center p-1 justify-between">

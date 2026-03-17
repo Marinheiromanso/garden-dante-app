@@ -38,6 +38,19 @@ export default function BillingReports() {
             </header>
 
             <main className="flex-1 overflow-y-auto pb-32">
+                {/* Hero Banner */}
+                <div className="mx-4 mt-4 rounded-2xl overflow-hidden relative h-36">
+                    <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&q=80")' }} />
+                    <div className="absolute inset-0 bg-gradient-to-r from-background-dark/90 to-background-dark/50" />
+                    <div className="relative h-full flex items-center p-5">
+                        <div>
+                            <p className="text-xs opacity-60 uppercase tracking-wider font-medium text-slate-100">Resumo Financeiro</p>
+                            <p className="text-3xl font-black mt-1 text-slate-100">R$ 4.850</p>
+                            <p className="text-xs text-primary font-medium mt-1">+12% em relação ao mês anterior</p>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Month Selector */}
                 <div className="px-4 py-6">
                     <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Mês de Referência</label>

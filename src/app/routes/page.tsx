@@ -211,6 +211,19 @@ const RouteOptimizerContent = () => {
             </header>
 
             <main className="flex-1 overflow-y-auto">
+                {/* Map Hero Image */}
+                <div className="mx-4 mt-2 rounded-2xl overflow-hidden relative h-32">
+                    <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1524661135-423995f22d0b?w=600&q=80")' }} />
+                    <div className="absolute inset-0 bg-gradient-to-r from-background-dark/85 to-background-dark/30" />
+                    <div className="relative h-full flex items-center p-5">
+                        <div>
+                            <p className="text-xs opacity-60 uppercase tracking-wider font-medium text-slate-100">Planeje seu dia</p>
+                            <h3 className="text-base font-black mt-1 text-slate-100">Rota Inteligente</h3>
+                            <p className="text-xs opacity-60 mt-1 text-slate-300">{routeSteps.length} paradas programadas</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="px-4 py-2">
                     <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 flex justify-between items-center">
                         <div className="flex flex-col">

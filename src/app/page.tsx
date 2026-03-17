@@ -117,9 +117,21 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
+        {/* Hero Banner */}
+        <div className="relative h-44 mx-4 mt-4 rounded-2xl overflow-hidden shadow-lg">
+          <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=800&q=80")' }} />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
+          <div className="relative z-10 h-full flex flex-col justify-end p-5">
+            <p className="text-white/70 text-xs font-medium uppercase tracking-wider">Bem-vindo de volta</p>
+            <h2 className="text-white text-2xl font-bold mt-1">Seu Jardim Digital</h2>
+            <p className="text-white/60 text-sm mt-1">Gerencie serviços, clientes e plantas em um só lugar.</p>
+          </div>
+        </div>
+
         {/* Weather Widget */}
-        <div className="m-4 rounded-xl bg-gradient-to-r from-primary/20 to-primary/5 p-4 flex items-center justify-between shadow-sm border border-primary/10">
-          <div className="flex items-center gap-4">
+        <div className="m-4 rounded-xl bg-gradient-to-r from-primary/20 to-primary/5 p-4 flex items-center justify-between shadow-sm border border-primary/10 relative overflow-hidden">
+          <div className="absolute inset-0 bg-cover bg-center opacity-10" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1504608524841-42fe6f032b4b?w=600&q=80")' }} />
+          <div className="relative z-10 flex items-center gap-4">
             <div className="flex items-center justify-center rounded-full bg-primary/20 text-primary size-12 shadow-inner">
               {weatherData.loading ? (
                 <span className="material-symbols-outlined text-3xl animate-spin">sync</span>
@@ -137,7 +149,7 @@ export default function Home() {
               </p>
             </div>
           </div>
-          <Link href="/guide" className="text-sm font-medium text-primary bg-primary/10 px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors">
+          <Link href="/guide" className="relative z-10 text-sm font-medium text-primary bg-primary/10 px-3 py-1.5 rounded-full hover:bg-primary/20 transition-colors">
             Detalhes
           </Link>
         </div>
@@ -150,10 +162,11 @@ export default function Home() {
           </div>
           <div className="flex overflow-x-auto gap-4 px-4 pb-4 snap-x hide-scrollbar">
             {todayPendingTasks.length === 0 ? (
-              <div className="flex-none w-full rounded-xl bg-white dark:bg-[#152e15] p-6 shadow-sm border border-slate-200 dark:border-slate-800 text-center">
-                <span className="material-symbols-outlined text-4xl text-primary/30 mb-2">event_available</span>
-                <p className="text-sm opacity-70 mt-2">Nenhum serviço pendente para hoje.</p>
-                <Link href="/pruning" className="text-primary text-sm font-bold mt-2 inline-block hover:underline">Agendar Serviço →</Link>
+              <div className="relative flex-none w-full rounded-xl bg-white dark:bg-[#152e15] p-6 shadow-sm border border-slate-200 dark:border-slate-800 text-center overflow-hidden">
+                <div className="absolute inset-0 bg-cover bg-center opacity-[0.07]" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80")' }} />
+                <span className="material-symbols-outlined text-4xl text-primary/30 mb-2 relative z-10">event_available</span>
+                <p className="text-sm opacity-70 mt-2 relative z-10">Nenhum serviço pendente para hoje.</p>
+                <Link href="/pruning" className="text-primary text-sm font-bold mt-2 inline-block hover:underline relative z-10">Agendar Serviço →</Link>
               </div>
             ) : (
               todayPendingTasks.map((task) => (
@@ -184,9 +197,10 @@ export default function Home() {
 
         {/* Plant Scanner CTA */}
         <div className="px-4 mt-2">
-          <Link href="/scanner" className="w-full flex items-center justify-center gap-3 bg-primary text-slate-900 rounded-xl p-4 shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-[0.98]">
-            <span className="material-symbols-outlined text-2xl">qr_code_scanner</span>
-            <span className="text-lg font-bold">Scanner de Plantas</span>
+          <Link href="/scanner" className="relative w-full flex items-center justify-center gap-3 bg-primary text-slate-900 rounded-xl p-4 shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-[0.98] overflow-hidden">
+            <div className="absolute inset-0 bg-cover bg-center opacity-15" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1446071103084-c257b5f70672?w=600&q=80")' }} />
+            <span className="material-symbols-outlined text-2xl relative z-10">qr_code_scanner</span>
+            <span className="text-lg font-bold relative z-10">Scanner de Plantas</span>
           </Link>
         </div>
 
@@ -194,38 +208,42 @@ export default function Home() {
         <div className="mt-6 px-4">
           <h3 className="text-lg font-bold mb-3">Acesso Rápido</h3>
           <div className="grid grid-cols-2 gap-3">
-            <Link href="/expenses" className="flex items-center gap-3 bg-white dark:bg-[#152e15] rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary/30 transition-all active:scale-[0.97]">
-              <div className="size-10 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
+            <Link href="/expenses" className="relative flex items-center gap-3 bg-white dark:bg-[#152e15] rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary/30 transition-all active:scale-[0.97] overflow-hidden">
+              <div className="absolute inset-0 bg-cover bg-center opacity-[0.06]" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=300&q=80")' }} />
+              <div className="size-10 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0 relative z-10">
                 <span className="material-symbols-outlined text-amber-500">account_balance_wallet</span>
               </div>
-              <div>
+              <div className="relative z-10">
                 <p className="text-sm font-bold">Despesas</p>
                 <p className="text-[10px] opacity-50">Controle financeiro</p>
               </div>
             </Link>
-            <Link href="/species" className="flex items-center gap-3 bg-white dark:bg-[#152e15] rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary/30 transition-all active:scale-[0.97]">
-              <div className="size-10 rounded-lg bg-lime-500/10 flex items-center justify-center shrink-0">
+            <Link href="/species" className="relative flex items-center gap-3 bg-white dark:bg-[#152e15] rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary/30 transition-all active:scale-[0.97] overflow-hidden">
+              <div className="absolute inset-0 bg-cover bg-center opacity-[0.06]" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?w=300&q=80")' }} />
+              <div className="size-10 rounded-lg bg-lime-500/10 flex items-center justify-center shrink-0 relative z-10">
                 <span className="material-symbols-outlined text-lime-500">menu_book</span>
               </div>
-              <div>
+              <div className="relative z-10">
                 <p className="text-sm font-bold">Espécies</p>
                 <p className="text-[10px] opacity-50">Biblioteca de plantas</p>
               </div>
             </Link>
-            <Link href="/health" className="flex items-center gap-3 bg-white dark:bg-[#152e15] rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary/30 transition-all active:scale-[0.97]">
-              <div className="size-10 rounded-lg bg-sky-500/10 flex items-center justify-center shrink-0">
+            <Link href="/health" className="relative flex items-center gap-3 bg-white dark:bg-[#152e15] rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary/30 transition-all active:scale-[0.97] overflow-hidden">
+              <div className="absolute inset-0 bg-cover bg-center opacity-[0.06]" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?w=300&q=80")' }} />
+              <div className="size-10 rounded-lg bg-sky-500/10 flex items-center justify-center shrink-0 relative z-10">
                 <span className="material-symbols-outlined text-sky-500">monitor_heart</span>
               </div>
-              <div>
+              <div className="relative z-10">
                 <p className="text-sm font-bold">Saúde</p>
                 <p className="text-[10px] opacity-50">Histórico de plantas</p>
               </div>
             </Link>
-            <Link href="/profile" className="flex items-center gap-3 bg-white dark:bg-[#152e15] rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary/30 transition-all active:scale-[0.97]">
-              <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <Link href="/profile" className="relative flex items-center gap-3 bg-white dark:bg-[#152e15] rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary/30 transition-all active:scale-[0.97] overflow-hidden">
+              <div className="absolute inset-0 bg-cover bg-center opacity-[0.06]" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1560250097-0b93528c311a?w=300&q=80")' }} />
+              <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 relative z-10">
                 <span className="material-symbols-outlined text-primary">badge</span>
               </div>
-              <div>
+              <div className="relative z-10">
                 <p className="text-sm font-bold">Perfil</p>
                 <p className="text-[10px] opacity-50">Portfólio profissional</p>
               </div>

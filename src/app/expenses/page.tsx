@@ -130,7 +130,10 @@ export default function ExpenseManagement() {
                 </header>
 
                 {/* Profit Summary Card */}
-                <div className="m-4 rounded-2xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent p-5 border border-primary/20 shadow-sm">
+                <div className="m-4 rounded-2xl overflow-hidden border border-primary/20 shadow-sm relative">
+                    <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=600&q=80")' }} />
+                    <div className="absolute inset-0 bg-gradient-to-br from-background-dark/90 via-background-dark/85 to-background-dark/70" />
+                    <div className="relative p-5">
                     <div className="flex items-center justify-between mb-4">
                         <div>
                             <p className="text-xs font-medium opacity-60 uppercase tracking-wider">Lucro Estimado do Mês</p>
@@ -162,6 +165,7 @@ export default function ExpenseManagement() {
                             <p className="text-[10px] opacity-50 uppercase">Despesas</p>
                             <p className="font-bold text-sm mt-1 text-red-400">{formatCurrency(totalMonth)}</p>
                         </div>
+                    </div>
                     </div>
                 </div>
 

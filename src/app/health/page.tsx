@@ -132,6 +132,19 @@ export default function HealthHistory() {
                     </button>
                 </header>
 
+                {/* Hero Banner */}
+                <div className="mx-4 mt-4 rounded-2xl overflow-hidden relative h-32">
+                    <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?w=600&q=80")' }} />
+                    <div className="absolute inset-0 bg-gradient-to-r from-background-dark/90 to-background-dark/40" />
+                    <div className="relative h-full flex items-center p-5">
+                        <div>
+                            <p className="text-xs opacity-60 uppercase tracking-wider font-medium">Monitoramento</p>
+                            <h3 className="text-lg font-black mt-1">Saúde das Plantas</h3>
+                            <p className="text-xs opacity-60 mt-1">{stats.total} registros • {stats.treating} em tratamento</p>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Stats Bar */}
                 <div className="flex overflow-x-auto gap-3 px-4 py-4 hide-scrollbar">
                     {(Object.entries(statusConfig) as [HealthStatus, typeof statusConfig[HealthStatus]][]).map(([key, cfg]) => {

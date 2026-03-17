@@ -15,9 +15,9 @@ export default function QuoteGenerator() {
     };
 
     const services = [
-        { id: 'poda', name: 'Poda de Árvores', price: 'R$ 45,00 / un', icon: 'content_cut' },
-        { id: 'adubacao', name: 'Adubação e Nutrição', price: 'R$ 15,00 / m²', icon: 'compost' },
-        { id: 'limpeza', name: 'Limpeza de Resíduos', price: 'R$ 80,00 / carga', icon: 'cleaning_services' },
+        { id: 'poda', name: 'Poda de Árvores', price: 'R$ 45,00 / un', icon: 'content_cut', image: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=200&h=200&fit=crop' },
+        { id: 'adubacao', name: 'Adubação e Nutrição', price: 'R$ 15,00 / m²', icon: 'compost', image: 'https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?w=200&h=200&fit=crop' },
+        { id: 'limpeza', name: 'Limpeza de Resíduos', price: 'R$ 80,00 / carga', icon: 'cleaning_services', image: 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=200&h=200&fit=crop' },
     ];
 
     return (
@@ -30,6 +30,19 @@ export default function QuoteGenerator() {
             </header>
 
             <main className="flex-1 overflow-y-auto px-4 py-6 space-y-8">
+                {/* Hero Banner */}
+                <div className="rounded-2xl overflow-hidden relative h-32">
+                    <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1592419044706-39796d40f98c?w=600&q=80")' }} />
+                    <div className="absolute inset-0 bg-gradient-to-r from-background-dark/90 to-background-dark/40" />
+                    <div className="relative h-full flex items-center p-5">
+                        <div>
+                            <p className="text-xs opacity-60 uppercase tracking-wider font-medium text-slate-100">Estimativa rápida</p>
+                            <h3 className="text-lg font-black mt-1 text-slate-100">Monte seu Orçamento</h3>
+                            <p className="text-xs opacity-60 mt-1 text-slate-300">Selecione os serviços e envie por WhatsApp</p>
+                        </div>
+                    </div>
+                </div>
+
                 <section>
                     <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                         <span className="material-symbols-outlined text-primary">potted_plant</span>
@@ -39,13 +52,13 @@ export default function QuoteGenerator() {
                         {services.map((service) => (
                             <label
                                 key={service.id}
-                                className={`flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer ${selectedServices.includes(service.id)
+                                className={`flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer overflow-hidden relative ${selectedServices.includes(service.id)
                                     ? 'border-primary/50 bg-primary/10'
                                     : 'border-primary/10 bg-primary/5 hover:bg-primary/10'
                                     }`}
                             >
                                 <div className="flex items-center gap-3">
-                                    <span className="material-symbols-outlined text-primary">{service.icon}</span>
+                                    <div className="size-12 rounded-lg bg-cover bg-center shrink-0 border border-primary/20" style={{ backgroundImage: `url("${service.image}")` }} />
                                     <div>
                                         <p className="font-medium">{service.name}</p>
                                         <p className="text-xs text-slate-500 dark:text-slate-400">{service.price}</p>
