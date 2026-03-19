@@ -1,27 +1,38 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, type RefObject } from 'react';
 import { useRouter } from 'next/navigation';
 import { X, Image as ImageIcon, Camera } from 'lucide-react';
 
-const initialProjects = [
-    {
-        id: 1,
-        client: 'Alice Johnson',
-        service: 'Poda de Roseiras',
-        date: '12 Out 2023',
-        before: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCry125WLrOSvGJ2rbrsucL-cDa-tngC30sKoTaAQvrXrN_nK1jXCSkxUNuAsFPYJb49xH1PN2sv8isDGl6Qk4jD_oqLHWIjhpSNG6zgeS0bvKYXbFH1B3DYSVXYsaxyJmHXjCamDYzEEji8XFBCKNqoS9oqdfRQfs1y0dWgauTH9NoE4_jfZbzarv2-1JM2XnL1QZzupH-6AmqF7wVab7hwn9NapJsr9j3o-Wm1x6Sr0_IEHLp5bqYbtNsGSUKOz1BAYreveXYihTX',
-        after: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBn2WbZ6yuZq2JInZ-ioQn2I6XDafaSSxyQ3Z2cDLZmErQ6_h29FyKCgsvCCJGDCX7PBbOBHJBHyfGSGbs9KvAy20Gct8-hlTeAQ2lNPnCGNSTQH3qJ8xZoWURymwZ0LJg8GzoXhrtiAGhLeSwkO_SIQbH11hswq8k3S6svDtlB6ZVwdV8kzZPWYD8diEQXQVbERkPaIMm3yX0tyPtUd57U65KfUxfMgJ3MakneKqhBXPfHK0mRwGG0T_n4osvJxdZVwodE_lwB3hcx'
-    },
-    {
-        id: 2,
-        client: 'Carlos Silva',
-        service: 'Revitalização de Gramado',
-        date: '05 Out 2023',
-        before: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCR7Fry_mNoDs6vgYQ0AUKxkHyuuuvavbOFsdJaY-NcszSLCn8UNM3lUJgNT_lncMV2qxrjwngH8GCfZA836BtyXJUx6wvKG-Ik5_-LdtFPW8lONG-4URaqcGzkE94sy1W2fLrYNTs7UaZVXVOZLi6o7IgHoRL7laIbUtlX38dWwjO8rro9sSpCLnG1gIftgrRzLHkZeUlGjSHSq5xp18-jG_bGaNW2hKpRs_dVnGJI5aiA2Ax1rS66wXk6D6YGtLG2JnY5JfWFB8Ap',
-        after: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDXvMyFDs4UgDv1SR_UikLiJbMxotV23YIj-AZWgi6mEqpRCxxjBSt0CrgcWo6FK_GlWet5ITRcIZ50H_lCWn16Y6ADk1ARVOtnjiyoB6dWrTtasmiWgGYDX8NBZ30rPCkY25pv3r8Spv0BYcSEZC7F0du3BFFLGkbuBupAp5sSdM_aT4i3u2xBgw8xxzRhbnHl0zIdQiCT_KDHztRPTLmbpIc8E6XYf4V0nZQBeDcXVH2AGaVWK32nemM5y8hx4f0vnFC4H2U5svlp'
-    }
-];
+function ImageUploadBox({ label, image, inputRef, onUpload, icon: Icon }: {
+    label: string;
+    image: string | null;
+    inputRef: RefObject<HTMLInputElement | null>;
+    onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    icon: typeof Camera;
+}) {
+    return (
+        <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{label}</label>
+            <div
+                onClick={() => inputRef.current?.click()}
+                className="aspect-square rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 flex flex-col items-center justify-center cursor-pointer hover:bg-primary/10 transition-colors overflow-hidden relative"
+            >
+                {image ? (
+                    <img src={image} alt={label} className="w-full h-full object-cover" />
+                ) : (
+                    <>
+                        <Icon className="w-8 h-8 text-primary/60 mb-2" />
+                        <span className="text-xs text-primary/80 font-medium">Adicionar</span>
+                    </>
+                )}
+                <input type="file" accept="image/*" ref={inputRef} onChange={onUpload} className="hidden" />
+            </div>
+        </div>
+    );
+}
+
+const initialProjects: { id: number; client: string; service: string; date: string; before: string; after: string }[] = [];
 
 export default function GalleryPage() {
     const router = useRouter();
@@ -51,7 +62,7 @@ export default function GalleryPage() {
 
         if (navigator.share) {
             navigator.share({
-                title: 'Garden Dante - Antes e Depois',
+                title: 'Magic Garden - Antes e Depois',
                 text: shareText,
             }).catch(console.error);
         } else {
@@ -171,55 +182,20 @@ export default function GalleryPage() {
                             </div>
 
                             <div className="grid grid-cols-2 gap-4 mt-2">
-                                {/* Before Image Upload */}
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Foto Antes</label>
-                                    <div
-                                        onClick={() => beforeInputRef.current?.click()}
-                                        className="aspect-square rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 flex flex-col items-center justify-center cursor-pointer hover:bg-primary/10 transition-colors overflow-hidden relative"
-                                    >
-                                        {beforeImage ? (
-                                            <img src={beforeImage} alt="Antes" className="w-full h-full object-cover" />
-                                        ) : (
-                                            <>
-                                                <Camera className="w-8 h-8 text-primary/60 mb-2" />
-                                                <span className="text-xs text-primary/80 font-medium">Adicionar</span>
-                                            </>
-                                        )}
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            ref={beforeInputRef}
-                                            onChange={(e) => handleImageUpload(e, 'before')}
-                                            className="hidden"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* After Image Upload */}
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Foto Depois</label>
-                                    <div
-                                        onClick={() => afterInputRef.current?.click()}
-                                        className="aspect-square rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 flex flex-col items-center justify-center cursor-pointer hover:bg-primary/10 transition-colors overflow-hidden relative"
-                                    >
-                                        {afterImage ? (
-                                            <img src={afterImage} alt="Depois" className="w-full h-full object-cover" />
-                                        ) : (
-                                            <>
-                                                <ImageIcon className="w-8 h-8 text-primary/60 mb-2" />
-                                                <span className="text-xs text-primary/80 font-medium">Adicionar</span>
-                                            </>
-                                        )}
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            ref={afterInputRef}
-                                            onChange={(e) => handleImageUpload(e, 'after')}
-                                            className="hidden"
-                                        />
-                                    </div>
-                                </div>
+                                <ImageUploadBox
+                                    label="Foto Antes"
+                                    image={beforeImage}
+                                    inputRef={beforeInputRef}
+                                    onUpload={(e) => handleImageUpload(e, 'before')}
+                                    icon={Camera}
+                                />
+                                <ImageUploadBox
+                                    label="Foto Depois"
+                                    image={afterImage}
+                                    inputRef={afterInputRef}
+                                    onUpload={(e) => handleImageUpload(e, 'after')}
+                                    icon={ImageIcon}
+                                />
                             </div>
 
                             <button type="submit" className="w-full bg-primary text-background-dark font-bold text-lg rounded-xl mt-4 py-3.5 hover:scale-[0.98] transition-transform shadow-lg shadow-primary/20">

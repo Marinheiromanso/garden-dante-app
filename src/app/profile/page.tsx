@@ -1,411 +1,653 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { auth, db } from '@/lib/firebase';
+import { onAuthStateChanged, updateProfile, updatePassword, EmailAuthProvider, reauthenticateWithCredential, signOut, type User } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 
-type Review = {
-    id: string;
-    clientName: string;
-    rating: number;
-    comment: string;
-    date: string;
-    avatar?: string;
-};
+const PROFILE_KEY = 'magicGardenProfile';
+
+function AlertBanner({ message, type, className }: { message: string; type: 'success' | 'error'; className?: string }) {
+    const isSuccess = type === 'success';
+    return (
+        <div className={cn(
+            "p-3 rounded-xl flex items-center gap-2 text-sm font-medium animate-in fade-in duration-300 border",
+            isSuccess ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "bg-red-500/10 border-red-500/20 text-red-400",
+            className
+        )}>
+            <span className="material-symbols-outlined text-lg">{isSuccess ? 'check_circle' : 'error'}</span>
+            {message}
+        </div>
+    );
+}
 
 type ProfileData = {
     name: string;
-    title: string;
-    bio: string;
-    phone: string;
     email: string;
+    whatsapp: string;
     city: string;
-    experience: string;
-    specialties: string[];
-    certifications: string[];
-    avatar: string;
+    bio: string;
+    specialties: string;
+    photoURL: string;
 };
-
-const STORAGE_KEY = 'gardenDanteProfile';
-const REVIEWS_KEY = 'gardenDanteReviews';
 
 const defaultProfile: ProfileData = {
-    name: 'Dante Oliveira',
-    title: 'Jardineiro Paisagista',
-    bio: 'Profissional apaixonado por jardins com mais de 8 anos transformando espaços verdes. Especialista em paisagismo sustentável, poda artística e cuidados com espécies tropicais.',
-    phone: '11999887766',
-    email: 'dante@gardendante.com',
-    city: 'São Paulo, SP',
-    experience: '8 anos',
-    specialties: ['Paisagismo Residencial', 'Poda Artística', 'Jardinagem Sustentável', 'Plantas Tropicais', 'Hortas Urbanas', 'Irrigação Inteligente'],
-    certifications: ['Técnico em Paisagismo - SENAI', 'Manejo de Pragas Orgânico', 'Arboricultura Urbana'],
-    avatar: 'https://images.unsplash.com/photo-1541888946425-d81bb19480c5?auto=format&fit=crop&q=80&w=300&h=300',
+    name: '',
+    email: '',
+    whatsapp: '',
+    city: '',
+    bio: '',
+    specialties: '',
+    photoURL: '',
 };
 
-const initialReviews: Review[] = [
-    { id: '1', clientName: 'Alice Johnson', rating: 5, comment: 'Trabalho impecável! Meu jardim nunca esteve tão bonito. Muito profissional e pontual.', date: '2026-03-10', avatar: 'https://ui-avatars.com/api/?name=Alice+J&background=13ec13&color=fff' },
-    { id: '2', clientName: 'Roberto Silva', rating: 5, comment: 'Excelente conhecimento sobre plantas. Salvou minha orquídea que estava quase morrendo!', date: '2026-03-05', avatar: 'https://ui-avatars.com/api/?name=Roberto+S&background=13ec13&color=fff' },
-    { id: '3', clientName: 'Maria Fernandes', rating: 4, comment: 'Ótima poda nas frutíferas. Recomendo para quem precisa de um jardineiro de confiança.', date: '2026-02-28', avatar: 'https://ui-avatars.com/api/?name=Maria+F&background=13ec13&color=fff' },
-    { id: '4', clientName: 'Smith Estate', rating: 5, comment: 'Transformou nosso quintal em um verdadeiro paraíso. Paisagismo de altíssimo nível.', date: '2026-02-20', avatar: 'https://ui-avatars.com/api/?name=Smith+E&background=13ec13&color=fff' },
-    { id: '5', clientName: 'João Pedro Lima', rating: 5, comment: 'Montou minha horta urbana do zero. Agora tenho temperos frescos toda semana!', date: '2026-02-15', avatar: 'https://ui-avatars.com/api/?name=João+P&background=13ec13&color=fff' },
-    { id: '6', clientName: 'Carla Mendes', rating: 4, comment: 'Muito atencioso e cuidadoso com cada detalhe. Gostei do resultado final.', date: '2026-02-10', avatar: 'https://ui-avatars.com/api/?name=Carla+M&background=13ec13&color=fff' },
-];
-
-export default function ProfessionalProfile() {
+export default function ProfilePage() {
     const router = useRouter();
-    const [profile, setProfile] = useState<ProfileData>(() => {
-        if (typeof window === 'undefined') return defaultProfile;
-        try {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            if (stored) return JSON.parse(stored);
-        } catch { /* ignore */ }
-        return defaultProfile;
-    });
-    const [reviews] = useState<Review[]>(() => {
-        if (typeof window === 'undefined') return initialReviews;
-        try {
-            const stored = localStorage.getItem(REVIEWS_KEY);
-            if (stored) return JSON.parse(stored);
-            localStorage.setItem(REVIEWS_KEY, JSON.stringify(initialReviews));
-        } catch { /* ignore */ }
-        return initialReviews;
-    });
-    const [activeTab, setActiveTab] = useState<'sobre' | 'avaliacoes'>('sobre');
-    const [editing, setEditing] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const cameraInputRef = useRef<HTMLInputElement>(null);
+    const [user, setUser] = useState<User | null>(null);
+    const [profile, setProfile] = useState<ProfileData>(defaultProfile);
+    const [editMode, setEditMode] = useState(false);
     const [editForm, setEditForm] = useState<ProfileData>(defaultProfile);
-    const [newSpecialty, setNewSpecialty] = useState('');
+    const [saving, setSaving] = useState(false);
+    const [success, setSuccess] = useState('');
+    const [error, setError] = useState('');
+    const [uploading, setUploading] = useState(false);
+    const [showPhotoMenu, setShowPhotoMenu] = useState(false);
 
-    const saveProfile = (updated: ProfileData) => {
-        setProfile(updated);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    // Password change
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [showCurrentPw, setShowCurrentPw] = useState(false);
+    const [showNewPw, setShowNewPw] = useState(false);
+    const [pwLoading, setPwLoading] = useState(false);
+    const [pwError, setPwError] = useState('');
+    const [pwSuccess, setPwSuccess] = useState('');
+
+    // Logout confirm
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+    // Theme
+    const [darkMode, setDarkMode] = useState(true);
+    const [notifications, setNotifications] = useState(true);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                setUser(firebaseUser);
+                // Try loading from Firestore first, fallback to localStorage
+                try {
+                    const docSnap = await getDoc(doc(db, 'users', firebaseUser.uid));
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        const loaded: ProfileData = {
+                            name: data.name || firebaseUser.displayName || '',
+                            email: firebaseUser.email || '',
+                            whatsapp: data.whatsapp || '',
+                            city: data.city || '',
+                            bio: data.bio || '',
+                            specialties: data.specialties || '',
+                            photoURL: firebaseUser.photoURL || data.photoURL || '',
+                        };
+                        setProfile(loaded);
+                        setEditForm(loaded);
+                        return;
+                    }
+                } catch { /* Firestore offline, use localStorage */ }
+
+                // Fallback to localStorage
+                try {
+                    const stored = localStorage.getItem(PROFILE_KEY);
+                    if (stored) {
+                        const parsed = JSON.parse(stored);
+                        const loaded: ProfileData = {
+                            ...defaultProfile,
+                            ...parsed,
+                            name: parsed.name || firebaseUser.displayName || '',
+                            email: firebaseUser.email || '',
+                            photoURL: firebaseUser.photoURL || parsed.photoURL || '',
+                        };
+                        setProfile(loaded);
+                        setEditForm(loaded);
+                        return;
+                    }
+                } catch { /* ignore */ }
+
+                // Defaults from auth
+                const loaded: ProfileData = {
+                    ...defaultProfile,
+                    name: firebaseUser.displayName || '',
+                    email: firebaseUser.email || '',
+                    photoURL: firebaseUser.photoURL || '',
+                };
+                setProfile(loaded);
+                setEditForm(loaded);
+            } else {
+                // Not logged in, use localStorage only
+                try {
+                    const stored = localStorage.getItem(PROFILE_KEY);
+                    if (stored) {
+                        const parsed = JSON.parse(stored);
+                        setProfile({ ...defaultProfile, ...parsed });
+                        setEditForm({ ...defaultProfile, ...parsed });
+                    }
+                } catch { /* ignore */ }
+            }
+        });
+        return () => unsubscribe();
+    }, []);
+
+    useEffect(() => {
+        const isDark = document.documentElement.classList.contains('dark');
+        setDarkMode(isDark);
+    }, []);
+
+    const saveProfile = async () => {
+        setSaving(true);
+        setError('');
+        setSuccess('');
+        try {
+            // Update Firebase Auth profile
+            if (user) {
+                await updateProfile(user, {
+                    displayName: editForm.name,
+                    photoURL: editForm.photoURL || null,
+                });
+                // Save to Firestore
+                try {
+                    await setDoc(doc(db, 'users', user.uid), {
+                        name: editForm.name,
+                        whatsapp: editForm.whatsapp,
+                        city: editForm.city,
+                        bio: editForm.bio,
+                        specialties: editForm.specialties,
+                        photoURL: editForm.photoURL,
+                        updatedAt: new Date().toISOString(),
+                    }, { merge: true });
+                } catch { /* Firestore offline */ }
+            }
+            // Always save to localStorage as backup
+            localStorage.setItem(PROFILE_KEY, JSON.stringify(editForm));
+            setProfile(editForm);
+            setEditMode(false);
+            setSuccess('Perfil atualizado com sucesso!');
+            setTimeout(() => setSuccess(''), 3000);
+        } catch {
+            setError('Erro ao salvar perfil. Tente novamente.');
+        } finally {
+            setSaving(false);
+        }
     };
 
-    const handleEditOpen = () => {
-        setEditForm({ ...profile });
-        setEditing(true);
+    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            setError('A imagem deve ter no máximo 5MB.');
+            return;
+        }
+
+        setUploading(true);
+        setError('');
+        try {
+            // Compress and convert to base64
+            const base64 = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const img = new window.Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const maxSize = 400;
+                        let w = img.width, h = img.height;
+                        if (w > h) { h = (h / w) * maxSize; w = maxSize; }
+                        else { w = (w / h) * maxSize; h = maxSize; }
+                        canvas.width = w;
+                        canvas.height = h;
+                        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+                        resolve(canvas.toDataURL('image/jpeg', 0.7));
+                    };
+                    img.onerror = reject;
+                    img.src = reader.result as string;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+
+            setEditForm(f => ({ ...f, photoURL: base64 }));
+            setProfile(p => ({ ...p, photoURL: base64 }));
+
+            // Save to Firestore + localStorage
+            if (user) {
+                await updateProfile(user, { photoURL: base64.slice(0, 1000) });
+                try {
+                    await setDoc(doc(db, 'users', user.uid), { photoURL: base64, updatedAt: new Date().toISOString() }, { merge: true });
+                } catch { /* Firestore offline */ }
+            }
+            localStorage.setItem(PROFILE_KEY, JSON.stringify({ ...profile, photoURL: base64 }));
+
+            setSuccess('Foto atualizada!');
+            setTimeout(() => setSuccess(''), 3000);
+        } catch {
+            setError('Erro ao processar foto. Tente novamente.');
+        } finally {
+            setUploading(false);
+        }
     };
 
-    const handleEditSave = (e: React.FormEvent) => {
+    const handleChangePassword = async (e: React.FormEvent) => {
         e.preventDefault();
-        saveProfile(editForm);
-        setEditing(false);
-    };
+        setPwError('');
+        setPwSuccess('');
 
-    const handleAddSpecialty = () => {
-        if (newSpecialty.trim() && !editForm.specialties.includes(newSpecialty.trim())) {
-            setEditForm({ ...editForm, specialties: [...editForm.specialties, newSpecialty.trim()] });
-            setNewSpecialty('');
+        if (newPassword.length < 6) {
+            setPwError('A nova senha deve ter pelo menos 6 caracteres.');
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            setPwError('As senhas não coincidem.');
+            return;
+        }
+        if (!user || !user.email) {
+            setPwError('Usuário não autenticado.');
+            return;
+        }
+
+        setPwLoading(true);
+        try {
+            const credential = EmailAuthProvider.credential(user.email, currentPassword);
+            await reauthenticateWithCredential(user, credential);
+            await updatePassword(user, newPassword);
+            setPwSuccess('Senha alterada com sucesso!');
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+            setTimeout(() => {
+                setShowPasswordModal(false);
+                setPwSuccess('');
+            }, 2000);
+        } catch {
+            setPwError('Senha atual incorreta ou erro de autenticação.');
+        } finally {
+            setPwLoading(false);
         }
     };
 
-    const handleRemoveSpecialty = (s: string) => {
-        setEditForm({ ...editForm, specialties: editForm.specialties.filter(sp => sp !== s) });
+    const handleLogout = async () => {
+        try {
+            await signOut(auth);
+            router.push('/login');
+        } catch {
+            router.push('/login');
+        }
     };
 
-    const avgRating = reviews.length > 0 ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length) : 0;
-
-    const shareProfile = () => {
-        const text = `🌿 *${profile.name}* - ${profile.title}\n\n${profile.bio}\n\n📍 ${profile.city}\n📞 ${formatPhone(profile.phone)}\n⭐ ${avgRating.toFixed(1)} (${reviews.length} avaliações)\n\nEspecialidades: ${profile.specialties.join(', ')}`;
-        const encoded = encodeURIComponent(text);
-
-        if (navigator.share) {
-            navigator.share({ title: profile.name, text }).catch(() => { });
+    const toggleDarkMode = () => {
+        const html = document.documentElement;
+        if (darkMode) {
+            html.classList.remove('dark');
         } else {
-            window.open(`https://wa.me/?text=${encoded}`, '_blank');
+            html.classList.add('dark');
         }
+        setDarkMode(!darkMode);
     };
 
-    const formatPhone = (phone: string) => {
-        const cleaned = phone.replace(/\D/g, '');
-        const match = cleaned.match(/^(\d{2})(\d{4,5})(\d{4})$/);
-        return match ? `(${match[1]}) ${match[2]}-${match[3]}` : phone;
-    };
-
-    const renderStars = (rating: number) => {
-        return Array.from({ length: 5 }, (_, i) => (
-            <span key={i} className={cn("material-symbols-outlined text-[18px]", i < rating ? "text-amber-400 !fill-[1]" : "text-slate-300 dark:text-slate-600")}>star</span>
-        ));
-    };
+    const photoSrc = editMode ? editForm.photoURL : profile.photoURL;
 
     return (
         <div className="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
             <div className="flex-1 overflow-y-auto pb-24">
                 {/* Header */}
-                <header className="flex items-center p-4 pb-2 justify-between sticky top-0 bg-background-light dark:bg-background-dark z-10 backdrop-blur-md border-b border-primary/20">
-                    <button onClick={() => router.back()} className="flex size-12 shrink-0 items-center justify-center hover:bg-primary/10 rounded-full transition-colors">
-                        <span className="material-symbols-outlined">arrow_back</span>
-                    </button>
-                    <h2 className="text-lg font-bold flex-1 text-center">Perfil Profissional</h2>
-                    <button onClick={shareProfile} className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors active:scale-95">
-                        <span className="material-symbols-outlined">share</span>
-                    </button>
-                </header>
-
-                {/* Profile Card */}
-                <div className="px-4 pt-6 pb-4">
-                    <div className="bg-gradient-to-br from-primary/20 via-primary/10 to-transparent rounded-2xl p-6 border border-primary/20 shadow-sm text-center relative">
-                        <button onClick={handleEditOpen} className="absolute top-3 right-3 p-2 hover:bg-primary/10 rounded-full transition-colors">
-                            <span className="material-symbols-outlined text-lg opacity-50">edit</span>
+                <header className="sticky top-0 bg-background-light dark:bg-background-dark z-10 backdrop-blur-md border-b border-primary/20">
+                    <div className="flex items-center p-4 justify-between">
+                        <button onClick={() => router.back()} className="flex size-12 shrink-0 items-center justify-center hover:bg-primary/10 rounded-full transition-colors">
+                            <span className="material-symbols-outlined">arrow_back</span>
                         </button>
-
-                        <div
-                            className="size-24 rounded-full mx-auto bg-cover bg-center border-4 border-primary/30 shadow-lg"
-                            style={{ backgroundImage: `url("${profile.avatar}")` }}
-                        />
-                        <h2 className="text-xl font-black mt-4">{profile.name}</h2>
-                        <p className="text-sm text-primary font-medium">{profile.title}</p>
-
-                        <div className="flex items-center justify-center gap-1 mt-3">
-                            {renderStars(Math.round(avgRating))}
-                            <span className="text-sm font-bold ml-1">{avgRating.toFixed(1)}</span>
-                            <span className="text-xs opacity-50">({reviews.length})</span>
-                        </div>
-
-                        <div className="flex justify-center gap-6 mt-5">
-                            <div className="text-center">
-                                <p className="text-xl font-black text-primary">{profile.experience}</p>
-                                <p className="text-[10px] opacity-50 uppercase">Experiência</p>
-                            </div>
-                            <div className="w-px bg-primary/20" />
-                            <div className="text-center">
-                                <p className="text-xl font-black text-primary">{reviews.length}</p>
-                                <p className="text-[10px] opacity-50 uppercase">Avaliações</p>
-                            </div>
-                            <div className="w-px bg-primary/20" />
-                            <div className="text-center">
-                                <p className="text-xl font-black text-primary">{profile.specialties.length}</p>
-                                <p className="text-[10px] opacity-50 uppercase">Serviços</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Contact Quick Actions */}
-                <div className="px-4 mb-4 flex gap-3">
-                    <a
-                        href={`https://wa.me/55${profile.phone.replace(/\D/g, '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 flex items-center justify-center gap-2 bg-emerald-500/10 text-emerald-400 rounded-xl py-3 font-bold text-sm border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors active:scale-[0.98]"
-                    >
-                        <span className="material-symbols-outlined text-lg">chat</span>
-                        WhatsApp
-                    </a>
-                    <a
-                        href={`tel:+55${profile.phone.replace(/\D/g, '')}`}
-                        className="flex-1 flex items-center justify-center gap-2 bg-sky-500/10 text-sky-400 rounded-xl py-3 font-bold text-sm border border-sky-500/20 hover:bg-sky-500/20 transition-colors active:scale-[0.98]"
-                    >
-                        <span className="material-symbols-outlined text-lg">call</span>
-                        Ligar
-                    </a>
-                    <a
-                        href={`mailto:${profile.email}`}
-                        className="flex-1 flex items-center justify-center gap-2 bg-primary/10 text-primary rounded-xl py-3 font-bold text-sm border border-primary/20 hover:bg-primary/20 transition-colors active:scale-[0.98]"
-                    >
-                        <span className="material-symbols-outlined text-lg">mail</span>
-                        E-mail
-                    </a>
-                </div>
-
-                {/* Tabs */}
-                <div className="flex border-b border-primary/20 px-4">
-                    <button
-                        onClick={() => setActiveTab('sobre')}
-                        className={cn("flex-1 pb-3 pt-4 text-sm font-bold border-b-[3px] transition-colors", activeTab === 'sobre' ? "border-primary" : "border-transparent text-slate-400")}
-                    >
-                        Sobre
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('avaliacoes')}
-                        className={cn("flex-1 pb-3 pt-4 text-sm font-bold border-b-[3px] transition-colors", activeTab === 'avaliacoes' ? "border-primary" : "border-transparent text-slate-400")}
-                    >
-                        Avaliações ({reviews.length})
-                    </button>
-                </div>
-
-                {/* Tab Content */}
-                {activeTab === 'sobre' ? (
-                    <div className="px-4 py-5 space-y-6">
-                        {/* Bio */}
-                        <div>
-                            <h3 className="font-bold mb-2 flex items-center gap-2">
-                                <span className="material-symbols-outlined text-primary text-lg">person</span>
-                                Sobre Mim
-                            </h3>
-                            <p className="text-sm opacity-80 leading-relaxed">{profile.bio}</p>
-                        </div>
-
-                        {/* Location & Contact Info */}
-                        <div>
-                            <h3 className="font-bold mb-3 flex items-center gap-2">
-                                <span className="material-symbols-outlined text-primary text-lg">info</span>
-                                Informações
-                            </h3>
-                            <div className="space-y-2">
-                                <div className="flex items-center gap-3 bg-white dark:bg-[#152e15] rounded-xl p-3 border border-slate-200 dark:border-slate-800">
-                                    <span className="material-symbols-outlined text-primary">location_on</span>
-                                    <p className="text-sm">{profile.city}</p>
-                                </div>
-                                <div className="flex items-center gap-3 bg-white dark:bg-[#152e15] rounded-xl p-3 border border-slate-200 dark:border-slate-800">
-                                    <span className="material-symbols-outlined text-primary">call</span>
-                                    <p className="text-sm">{formatPhone(profile.phone)}</p>
-                                </div>
-                                <div className="flex items-center gap-3 bg-white dark:bg-[#152e15] rounded-xl p-3 border border-slate-200 dark:border-slate-800">
-                                    <span className="material-symbols-outlined text-primary">mail</span>
-                                    <p className="text-sm">{profile.email}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Specialties */}
-                        <div>
-                            <h3 className="font-bold mb-3 flex items-center gap-2">
-                                <span className="material-symbols-outlined text-primary text-lg">eco</span>
-                                Especialidades
-                            </h3>
-                            <div className="flex flex-wrap gap-2">
-                                {profile.specialties.map((s, i) => (
-                                    <span key={i} className="text-xs font-medium bg-primary/10 text-primary px-3 py-2 rounded-full">
-                                        {s}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Certifications */}
-                        <div>
-                            <h3 className="font-bold mb-3 flex items-center gap-2">
-                                <span className="material-symbols-outlined text-primary text-lg">workspace_premium</span>
-                                Certificações
-                            </h3>
-                            <div className="space-y-2">
-                                {profile.certifications.map((cert, i) => (
-                                    <div key={i} className="flex items-center gap-3 bg-amber-500/5 rounded-xl p-3 border border-amber-500/10">
-                                        <span className="material-symbols-outlined text-amber-400 text-lg">verified</span>
-                                        <p className="text-sm font-medium">{cert}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="px-4 py-5 space-y-3">
-                        {/* Rating Summary */}
-                        <div className="bg-white dark:bg-[#152e15] rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-5 mb-4">
-                            <div className="text-center">
-                                <p className="text-4xl font-black text-primary">{avgRating.toFixed(1)}</p>
-                                <div className="flex mt-1">{renderStars(Math.round(avgRating))}</div>
-                                <p className="text-xs opacity-50 mt-1">{reviews.length} avaliações</p>
-                            </div>
-                            <div className="flex-1 space-y-1.5">
-                                {[5, 4, 3, 2, 1].map(star => {
-                                    const count = reviews.filter(r => r.rating === star).length;
-                                    const pct = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
-                                    return (
-                                        <div key={star} className="flex items-center gap-2">
-                                            <span className="text-xs w-3 text-right opacity-50">{star}</span>
-                                            <div className="flex-1 h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                                                <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
-                                            </div>
-                                            <span className="text-[10px] w-5 opacity-40">{count}</span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {/* Reviews */}
-                        {reviews.map(review => (
-                            <div key={review.id} className="bg-white dark:bg-[#152e15] rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm">
-                                <div className="flex items-center gap-3 mb-3">
-                                    <div
-                                        className="size-10 rounded-full bg-cover bg-center shrink-0"
-                                        style={{ backgroundImage: `url("${review.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(review.clientName)}&background=13ec13&color=fff`}")` }}
-                                    />
-                                    <div className="flex-1">
-                                        <p className="text-sm font-bold">{review.clientName}</p>
-                                        <div className="flex items-center gap-2">
-                                            <div className="flex">{renderStars(review.rating)}</div>
-                                            <span className="text-xs opacity-40">{new Date(review.date + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <p className="text-sm opacity-80 leading-relaxed">{review.comment}</p>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {/* Edit Profile Modal */}
-            {editing && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center" onClick={() => setEditing(false)}>
-                    <div className="bg-white dark:bg-[#152e15] rounded-t-2xl sm:rounded-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-lg font-bold">Editar Perfil</h3>
-                            <button onClick={() => setEditing(false)} className="p-1 hover:bg-primary/10 rounded-full transition-colors">
+                        <h2 className="text-lg font-bold flex-1 text-center">Meu Perfil</h2>
+                        {!editMode ? (
+                            <button onClick={() => { setEditForm(profile); setEditMode(true); }} className="p-2 text-primary hover:bg-primary/10 rounded-full transition-colors active:scale-95">
+                                <span className="material-symbols-outlined">edit</span>
+                            </button>
+                        ) : (
+                            <button onClick={() => setEditMode(false)} className="p-2 text-slate-500 hover:bg-primary/10 rounded-full transition-colors active:scale-95">
                                 <span className="material-symbols-outlined">close</span>
                             </button>
+                        )}
+                    </div>
+                </header>
+
+                {/* Success / Error Banners */}
+                {success && <AlertBanner message={success} type="success" className="mx-4 mt-3" />}
+                {error && <AlertBanner message={error} type="error" className="mx-4 mt-3" />}
+
+                {/* Profile Photo Section */}
+                <div className="flex flex-col items-center mt-6 mb-2 px-4">
+                    <div className="relative group">
+                        <div className="size-28 rounded-full overflow-hidden border-4 border-primary/30 shadow-lg shadow-primary/10">
+                            {photoSrc ? (
+                                <img src={photoSrc} alt="Foto de perfil" className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full bg-primary/10 flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-5xl text-primary/40">person</span>
+                                </div>
+                            )}
                         </div>
-                        <form onSubmit={handleEditSave} className="flex flex-col gap-4">
-                            <div>
-                                <label className="text-xs font-medium opacity-60 mb-1 block">Nome</label>
-                                <input type="text" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="w-full bg-slate-100 dark:bg-white/5 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/50" required />
-                            </div>
-                            <div>
-                                <label className="text-xs font-medium opacity-60 mb-1 block">Título Profissional</label>
-                                <input type="text" value={editForm.title} onChange={e => setEditForm({ ...editForm, title: e.target.value })} className="w-full bg-slate-100 dark:bg-white/5 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/50" required />
-                            </div>
-                            <div>
-                                <label className="text-xs font-medium opacity-60 mb-1 block">Sobre</label>
-                                <textarea value={editForm.bio} onChange={e => setEditForm({ ...editForm, bio: e.target.value })} className="w-full bg-slate-100 dark:bg-white/5 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/50 min-h-[80px] resize-none" required />
-                            </div>
-                            <div className="flex gap-3">
-                                <div className="flex-1">
-                                    <label className="text-xs font-medium opacity-60 mb-1 block">Telefone</label>
-                                    <input type="text" value={editForm.phone} onChange={e => setEditForm({ ...editForm, phone: e.target.value })} className="w-full bg-slate-100 dark:bg-white/5 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/50" />
+                        <button
+                            onClick={() => setShowPhotoMenu(true)}
+                            disabled={uploading}
+                            className="absolute bottom-0 right-0 size-10 rounded-full bg-primary text-slate-900 flex items-center justify-center shadow-lg hover:bg-primary/90 transition-all active:scale-90"
+                        >
+                            {uploading ? (
+                                <span className="material-symbols-outlined text-lg animate-spin">sync</span>
+                            ) : (
+                                <span className="material-symbols-outlined text-lg">photo_camera</span>
+                            )}
+                        </button>
+                        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoUpload} />
+                    </div>
+
+                    {/* Photo Source Menu */}
+                    {showPhotoMenu && (
+                        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end justify-center" onClick={() => setShowPhotoMenu(false)}>
+                            <div className="bg-white dark:bg-[#152e15] rounded-t-2xl w-full max-w-lg p-4 pb-8 animate-in slide-in-from-bottom" onClick={e => e.stopPropagation()}>
+                                <div className="w-10 h-1 bg-slate-300 dark:bg-slate-600 rounded-full mx-auto mb-4" />
+                                <h3 className="text-base font-bold text-center mb-4">Alterar Foto de Perfil</h3>
+                                <div className="flex flex-col gap-2">
+                                    <button
+                                        onClick={() => { setShowPhotoMenu(false); cameraInputRef.current?.click(); }}
+                                        className="flex items-center gap-4 p-4 rounded-xl hover:bg-primary/10 transition-colors active:scale-[0.98]"
+                                    >
+                                        <div className="size-11 rounded-full bg-primary/10 flex items-center justify-center">
+                                            <span className="material-symbols-outlined text-primary">photo_camera</span>
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="font-semibold text-sm">Tirar Foto</p>
+                                            <p className="text-xs opacity-50">Usar a câmera do dispositivo</p>
+                                        </div>
+                                    </button>
+                                    <button
+                                        onClick={() => { setShowPhotoMenu(false); fileInputRef.current?.click(); }}
+                                        className="flex items-center gap-4 p-4 rounded-xl hover:bg-primary/10 transition-colors active:scale-[0.98]"
+                                    >
+                                        <div className="size-11 rounded-full bg-violet-500/10 flex items-center justify-center">
+                                            <span className="material-symbols-outlined text-violet-500">photo_library</span>
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="font-semibold text-sm">Escolher da Galeria</p>
+                                            <p className="text-xs opacity-50">Selecionar uma foto existente</p>
+                                        </div>
+                                    </button>
                                 </div>
-                                <div className="flex-1">
-                                    <label className="text-xs font-medium opacity-60 mb-1 block">Experiência</label>
-                                    <input type="text" value={editForm.experience} onChange={e => setEditForm({ ...editForm, experience: e.target.value })} className="w-full bg-slate-100 dark:bg-white/5 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/50" />
-                                </div>
+                                <button
+                                    onClick={() => setShowPhotoMenu(false)}
+                                    className="w-full mt-3 py-3 text-sm font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    <h3 className="text-xl font-bold mt-4">{profile.name || 'Seu Nome'}</h3>
+                    <p className="text-sm opacity-50">{profile.email || 'seu@email.com'}</p>
+                    {profile.city && (
+                        <p className="text-xs opacity-40 mt-1 flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]">location_on</span>
+                            {profile.city}
+                        </p>
+                    )}
+                </div>
+
+                {/* Edit Mode */}
+                {editMode ? (
+                    <div className="px-4 mt-4">
+                        <div className="bg-white dark:bg-[#152e15] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4 shadow-sm">
+                            <h4 className="text-sm font-bold text-primary flex items-center gap-2">
+                                <span className="material-symbols-outlined text-lg">edit_note</span>
+                                Editar Informações
+                            </h4>
+
+                            <div>
+                                <label className="text-xs font-medium opacity-60 mb-1 block">Nome Completo</label>
+                                <input type="text" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="w-full bg-slate-100 dark:bg-white/5 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/50" placeholder="Seu nome" />
                             </div>
                             <div>
-                                <label className="text-xs font-medium opacity-60 mb-1 block">E-mail</label>
-                                <input type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} className="w-full bg-slate-100 dark:bg-white/5 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/50" />
+                                <label className="text-xs font-medium opacity-60 mb-1 block">WhatsApp</label>
+                                <input type="tel" value={editForm.whatsapp} onChange={e => setEditForm({ ...editForm, whatsapp: e.target.value })} className="w-full bg-slate-100 dark:bg-white/5 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/50" placeholder="(00) 00000-0000" />
                             </div>
                             <div>
                                 <label className="text-xs font-medium opacity-60 mb-1 block">Cidade</label>
-                                <input type="text" value={editForm.city} onChange={e => setEditForm({ ...editForm, city: e.target.value })} className="w-full bg-slate-100 dark:bg-white/5 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/50" />
+                                <input type="text" value={editForm.city} onChange={e => setEditForm({ ...editForm, city: e.target.value })} className="w-full bg-slate-100 dark:bg-white/5 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/50" placeholder="Ex: São Paulo, SP" />
                             </div>
                             <div>
-                                <label className="text-xs font-medium opacity-60 mb-2 block">Especialidades</label>
-                                <div className="flex flex-wrap gap-2 mb-2">
-                                    {editForm.specialties.map((s, i) => (
-                                        <span key={i} className="flex items-center gap-1 text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-full">
-                                            {s}
-                                            <button type="button" onClick={() => handleRemoveSpecialty(s)} className="ml-1 hover:text-red-400 transition-colors">×</button>
-                                        </span>
-                                    ))}
+                                <label className="text-xs font-medium opacity-60 mb-1 block">Especialidades</label>
+                                <input type="text" value={editForm.specialties} onChange={e => setEditForm({ ...editForm, specialties: e.target.value })} className="w-full bg-slate-100 dark:bg-white/5 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/50" placeholder="Ex: Paisagismo, podas, jardins verticais" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-medium opacity-60 mb-1 block">Bio / Sobre</label>
+                                <textarea value={editForm.bio} onChange={e => setEditForm({ ...editForm, bio: e.target.value })} className="w-full bg-slate-100 dark:bg-white/5 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/50 min-h-[80px] resize-none" placeholder="Conte um pouco sobre você e seu trabalho..." />
+                            </div>
+
+                            <button onClick={saveProfile} disabled={saving} className="w-full bg-primary text-slate-900 font-bold py-3 rounded-xl mt-2 hover:bg-primary/90 transition-colors active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2">
+                                {saving ? (
+                                    <><span className="material-symbols-outlined text-lg animate-spin">sync</span> Salvando...</>
+                                ) : (
+                                    <><span className="material-symbols-outlined text-lg">save</span> Salvar Alterações</>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        {/* Info Cards (View Mode) */}
+                        {(profile.bio || profile.specialties) && (
+                            <div className="px-4 mt-4">
+                                <div className="bg-white dark:bg-[#152e15] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-3 shadow-sm">
+                                    {profile.bio && (
+                                        <div>
+                                            <p className="text-xs font-medium opacity-50 uppercase mb-1">Sobre</p>
+                                            <p className="text-sm leading-relaxed">{profile.bio}</p>
+                                        </div>
+                                    )}
+                                    {profile.specialties && (
+                                        <div>
+                                            <p className="text-xs font-medium opacity-50 uppercase mb-1">Especialidades</p>
+                                            <div className="flex flex-wrap gap-2 mt-1">
+                                                {profile.specialties.split(',').map((s, i) => (
+                                                    <span key={i} className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full font-medium">{s.trim()}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        value={newSpecialty}
-                                        onChange={e => setNewSpecialty(e.target.value)}
-                                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddSpecialty(); } }}
-                                        className="flex-1 bg-slate-100 dark:bg-white/5 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
-                                        placeholder="Nova especialidade..."
-                                    />
-                                    <button type="button" onClick={handleAddSpecialty} className="px-4 py-2 bg-primary/10 text-primary rounded-xl text-sm font-bold hover:bg-primary/20 transition-colors">
-                                        +
+                            </div>
+                        )}
+
+                        {/* Contact Info */}
+                        <div className="px-4 mt-4">
+                            <div className="bg-white dark:bg-[#152e15] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                                <div className="px-5 pt-4 pb-2">
+                                    <p className="text-xs font-bold text-primary uppercase tracking-wider">Informações de Contato</p>
+                                </div>
+                                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                                    <div className="flex items-center gap-4 px-5 py-3.5">
+                                        <div className="size-10 rounded-lg bg-sky-500/10 flex items-center justify-center shrink-0">
+                                            <span className="material-symbols-outlined text-sky-500">email</span>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs opacity-50">E-mail</p>
+                                            <p className="text-sm font-medium truncate">{profile.email || '—'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-4 px-5 py-3.5">
+                                        <div className="size-10 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                                            <span className="material-symbols-outlined text-emerald-500">phone</span>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs opacity-50">WhatsApp</p>
+                                            <p className="text-sm font-medium">{profile.whatsapp || '—'}</p>
+                                        </div>
+                                    </div>
+                                    {profile.city && (
+                                        <div className="flex items-center gap-4 px-5 py-3.5">
+                                            <div className="size-10 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
+                                                <span className="material-symbols-outlined text-amber-500">location_on</span>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-xs opacity-50">Cidade</p>
+                                                <p className="text-sm font-medium">{profile.city}</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Settings */}
+                        <div className="px-4 mt-4">
+                            <div className="bg-white dark:bg-[#152e15] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                                <div className="px-5 pt-4 pb-2">
+                                    <p className="text-xs font-bold text-primary uppercase tracking-wider">Configurações</p>
+                                </div>
+                                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                                    {/* Dark Mode Toggle */}
+                                    <button onClick={toggleDarkMode} className="flex items-center gap-4 px-5 py-3.5 w-full text-left hover:bg-primary/5 transition-colors">
+                                        <div className="size-10 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
+                                            <span className="material-symbols-outlined text-violet-500">{darkMode ? 'dark_mode' : 'light_mode'}</span>
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium">Modo Escuro</p>
+                                            <p className="text-xs opacity-50">{darkMode ? 'Ativado' : 'Desativado'}</p>
+                                        </div>
+                                        <div className={cn("w-12 h-7 rounded-full p-1 transition-colors", darkMode ? "bg-primary" : "bg-slate-300 dark:bg-slate-700")}>
+                                            <div className={cn("size-5 rounded-full bg-white shadow-sm transition-transform", darkMode && "translate-x-5")} />
+                                        </div>
+                                    </button>
+
+                                    {/* Notifications Toggle */}
+                                    <button onClick={() => setNotifications(!notifications)} className="flex items-center gap-4 px-5 py-3.5 w-full text-left hover:bg-primary/5 transition-colors">
+                                        <div className="size-10 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
+                                            <span className="material-symbols-outlined text-amber-500">{notifications ? 'notifications_active' : 'notifications_off'}</span>
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium">Notificações</p>
+                                            <p className="text-xs opacity-50">{notifications ? 'Ativadas' : 'Desativadas'}</p>
+                                        </div>
+                                        <div className={cn("w-12 h-7 rounded-full p-1 transition-colors", notifications ? "bg-primary" : "bg-slate-300 dark:bg-slate-700")}>
+                                            <div className={cn("size-5 rounded-full bg-white shadow-sm transition-transform", notifications && "translate-x-5")} />
+                                        </div>
+                                    </button>
+
+                                    {/* Change Password */}
+                                    <button onClick={() => { setPwError(''); setPwSuccess(''); setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); setShowPasswordModal(true); }} className="flex items-center gap-4 px-5 py-3.5 w-full text-left hover:bg-primary/5 transition-colors">
+                                        <div className="size-10 rounded-lg bg-sky-500/10 flex items-center justify-center shrink-0">
+                                            <span className="material-symbols-outlined text-sky-500">lock</span>
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium">Alterar Senha</p>
+                                            <p className="text-xs opacity-50">Atualizar senha de login</p>
+                                        </div>
+                                        <span className="material-symbols-outlined text-lg opacity-30">chevron_right</span>
+                                    </button>
+
+                                    {/* Terms */}
+                                    <button onClick={() => router.push('/terms')} className="flex items-center gap-4 px-5 py-3.5 w-full text-left hover:bg-primary/5 transition-colors">
+                                        <div className="size-10 rounded-lg bg-slate-500/10 flex items-center justify-center shrink-0">
+                                            <span className="material-symbols-outlined text-slate-500">description</span>
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium">Termos de Uso</p>
+                                            <p className="text-xs opacity-50">Política e condições</p>
+                                        </div>
+                                        <span className="material-symbols-outlined text-lg opacity-30">chevron_right</span>
                                     </button>
                                 </div>
                             </div>
-                            <button type="submit" className="w-full bg-primary text-slate-900 font-bold py-3 rounded-xl mt-2 hover:bg-primary/90 transition-colors active:scale-[0.98]">
-                                Salvar Perfil
+                        </div>
+
+                        {/* Logout */}
+                        <div className="px-4 mt-4 mb-6">
+                            <button onClick={() => setShowLogoutConfirm(true)} className="w-full flex items-center justify-center gap-2 py-3.5 border border-red-400/20 text-red-400 rounded-2xl font-bold text-sm hover:bg-red-500/10 transition-colors active:scale-[0.98]">
+                                <span className="material-symbols-outlined text-lg">logout</span>
+                                Sair da Conta
+                            </button>
+                            <p className="text-center text-[10px] opacity-30 mt-4">Magic Garden v1.0</p>
+                        </div>
+                    </>
+                )}
+            </div>
+
+            {/* Password Change Modal */}
+            {showPasswordModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center" onClick={() => setShowPasswordModal(false)}>
+                    <div className="bg-white dark:bg-[#152e15] rounded-t-2xl sm:rounded-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-lg font-bold">Alterar Senha</h3>
+                            <button onClick={() => setShowPasswordModal(false)} className="p-1 hover:bg-primary/10 rounded-full transition-colors">
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+
+                        {pwSuccess && <AlertBanner message={pwSuccess} type="success" className="mb-4" />}
+                        {pwError && <AlertBanner message={pwError} type="error" className="mb-4" />}
+
+                        <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
+                            <div>
+                                <label className="text-xs font-medium opacity-60 mb-1 block">Senha Atual</label>
+                                <div className="relative">
+                                    <input type={showCurrentPw ? 'text' : 'password'} value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="w-full bg-slate-100 dark:bg-white/5 rounded-xl px-4 py-3 pr-12 text-sm outline-none focus:ring-2 focus:ring-primary/50" placeholder="Sua senha atual" required />
+                                    <button type="button" onClick={() => setShowCurrentPw(!showCurrentPw)} className="absolute right-3 top-1/2 -translate-y-1/2 opacity-40 hover:opacity-70">
+                                        <span className="material-symbols-outlined text-xl">{showCurrentPw ? 'visibility_off' : 'visibility'}</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-xs font-medium opacity-60 mb-1 block">Nova Senha</label>
+                                <div className="relative">
+                                    <input type={showNewPw ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full bg-slate-100 dark:bg-white/5 rounded-xl px-4 py-3 pr-12 text-sm outline-none focus:ring-2 focus:ring-primary/50" placeholder="Mínimo 6 caracteres" required />
+                                    <button type="button" onClick={() => setShowNewPw(!showNewPw)} className="absolute right-3 top-1/2 -translate-y-1/2 opacity-40 hover:opacity-70">
+                                        <span className="material-symbols-outlined text-xl">{showNewPw ? 'visibility_off' : 'visibility'}</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-xs font-medium opacity-60 mb-1 block">Confirmar Nova Senha</label>
+                                <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full bg-slate-100 dark:bg-white/5 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/50" placeholder="Repita a nova senha" required />
+                            </div>
+                            <button type="submit" disabled={pwLoading} className="w-full bg-primary text-slate-900 font-bold py-3 rounded-xl mt-2 hover:bg-primary/90 transition-colors active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2">
+                                {pwLoading ? (
+                                    <><span className="material-symbols-outlined text-lg animate-spin">sync</span> Alterando...</>
+                                ) : (
+                                    <><span className="material-symbols-outlined text-lg">lock_reset</span> Alterar Senha</>
+                                )}
                             </button>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Logout Confirm Modal */}
+            {showLogoutConfirm && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowLogoutConfirm(false)}>
+                    <div className="bg-white dark:bg-[#152e15] rounded-2xl w-full max-w-sm p-6 text-center" onClick={e => e.stopPropagation()}>
+                        <div className="size-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+                            <span className="material-symbols-outlined text-3xl text-red-400">logout</span>
+                        </div>
+                        <h3 className="text-lg font-bold mb-2">Sair da Conta?</h3>
+                        <p className="text-sm opacity-50 mb-6">Você precisará fazer login novamente para acessar o aplicativo.</p>
+                        <div className="flex gap-3">
+                            <button onClick={() => setShowLogoutConfirm(false)} className="flex-1 py-3 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold hover:bg-primary/5 transition-colors">
+                                Cancelar
+                            </button>
+                            <button onClick={handleLogout} className="flex-1 py-3 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 transition-colors active:scale-[0.98]">
+                                Sair
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

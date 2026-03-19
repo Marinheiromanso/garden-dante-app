@@ -19,11 +19,8 @@ export default function PruningSchedule() {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
 
-    // Default demo tasks
-    const defaultTasks = [
-        { id: '1', dateString: formatDateString(new Date()), client: 'João Silva', address: 'Rua das Flores, 123', service: 'Poda de Roseiras', time: '09:00', status: 'Pendente', icon: 'local_florist' },
-        { id: '2', dateString: formatDateString(new Date()), client: 'Maria Oliveira', address: 'Av. Brasil, 456', service: 'Corte de Grama', time: '11:00', status: 'Pendente', icon: 'grass' },
-    ];
+    // Task defaults (empty — user creates their own)
+    const defaultTasks: { id: string; dateString: string; client: string; address: string; service: string; time: string; status: string; icon: string }[] = [];
 
     // Task State — load from localStorage
     const [tasks, setTasks] = useState(defaultTasks);
@@ -36,14 +33,22 @@ export default function PruningSchedule() {
         setIsMounted(true);
         setCurrentDate(new Date());
         setSelectedDate(new Date());
-        // Load tasks from localStorage
+        // Clean old demo data once, then load tasks
         try {
-            const stored = localStorage.getItem('gardenDanteTasks');
-            if (stored) {
-                setTasks(JSON.parse(stored));
+            if (!localStorage.getItem('magicGarden_cleaned_v2')) {
+                localStorage.removeItem('magicGardenTasks');
+                localStorage.removeItem('magicGardenHealthHistory');
+                localStorage.removeItem('magicGardenExpenses');
+                localStorage.removeItem('magicGardenStock');
+                localStorage.removeItem('magicGardenTools');
+                localStorage.removeItem('magicGardenToolLogs');
+                localStorage.removeItem('magicGardenMonthlyRevenue');
+                localStorage.setItem('magicGarden_cleaned_v2', '1');
             } else {
-                // First time: save defaults
-                localStorage.setItem('gardenDanteTasks', JSON.stringify(defaultTasks));
+                const stored = localStorage.getItem('magicGardenTasks');
+                if (stored) {
+                    setTasks(JSON.parse(stored));
+                }
             }
         } catch (e) {
             console.warn('Failed to load tasks from localStorage', e);
@@ -53,7 +58,7 @@ export default function PruningSchedule() {
     // Persist tasks to localStorage whenever they change
     useEffect(() => {
         if (isMounted) {
-            localStorage.setItem('gardenDanteTasks', JSON.stringify(tasks));
+            localStorage.setItem('magicGardenTasks', JSON.stringify(tasks));
         }
     }, [tasks, isMounted]);
 

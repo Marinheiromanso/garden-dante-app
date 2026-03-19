@@ -121,7 +121,7 @@ export default function QuoteGenerator() {
                     <button
                         onClick={() => {
                             const total = (trees * 45 + 80).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-                            const text = `Olá! Segue a estimativa de orçamento do Garden Dante:\n\n` +
+                            const text = `Olá! Segue a estimativa de orçamento do Magic Garden:\n\n` +
                                 `- Poda (${trees}un): R$ ${(trees * 45).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n` +
                                 `- Limpeza (1 carga): R$ 80,00\n\n` +
                                 `*Total Estimado: R$ ${total}*\n\n` +

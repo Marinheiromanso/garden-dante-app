@@ -23,7 +23,7 @@ export default function TermsPage() {
                         <div>
                             <div className="flex items-center gap-2 mb-1">
                                 <span className="material-symbols-outlined text-primary text-lg">description</span>
-                                <p className="text-xs text-primary font-bold uppercase tracking-wider">Garden Dante</p>
+                                <p className="text-xs text-primary font-bold uppercase tracking-wider">Magic Garden</p>
                             </div>
                             <h3 className="text-lg font-black text-slate-100">Termos e Condições de Uso</h3>
                         </div>
@@ -36,7 +36,7 @@ export default function TermsPage() {
                         1. Aceitação dos Termos
                     </h2>
                     <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                        Ao acessar e usar o Garden Dante, você concorda em cumprir e ser regido por estes Termos e Condições. Se você não concordar com qualquer parte destes termos, não deverá usar o aplicativo.
+                        Ao acessar e usar o Magic Garden, você concorda em cumprir e ser regido por estes Termos e Condições. Se você não concordar com qualquer parte destes termos, não deverá usar o aplicativo.
                     </p>
                 </section>
 
@@ -61,7 +61,7 @@ export default function TermsPage() {
                         3. Uso do Serviço
                     </h2>
                     <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                        O Garden Dante é uma ferramenta de auxílio à gestão. O usuário é responsável pela precisão das informações inseridas e pelo uso ético das funcionalidades, incluindo o respeito à privacidade de seus próprios clientes.
+                        O Magic Garden é uma ferramenta de auxílio à gestão. O usuário é responsável pela precisão das informações inseridas e pelo uso ético das funcionalidades, incluindo o respeito à privacidade de seus próprios clientes.
                     </p>
                 </section>
 

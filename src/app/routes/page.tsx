@@ -16,35 +16,7 @@ type RouteStep = {
     type: 'stop';
 };
 
-const initialRouteSteps: RouteStep[] = [
-    {
-        id: 1,
-        client: 'Residência Silva - Poda',
-        address: 'Rua das Azaleias, 123',
-        time: '08:00',
-        duration: '1h 30m serviço',
-        distance: '0 km',
-        type: 'stop'
-    },
-    {
-        id: 2,
-        client: 'Parque das Flores - Paisagismo',
-        address: 'Praça da Liberdade, S/N',
-        time: '13:30',
-        duration: '1h 00m serviço',
-        transition: '5.1 km • 18 min de deslocamento',
-        type: 'stop'
-    },
-    {
-        id: 3,
-        client: 'Condomínio Solar - Adubação',
-        address: 'Av. Central, 900',
-        time: '10:45',
-        duration: '2h 00m serviço',
-        transition: '2.4 km • 12 min de deslocamento',
-        type: 'stop'
-    }
-];
+const initialRouteSteps: RouteStep[] = [];
 
 const RouteOptimizerContent = () => {
     const router = useRouter();
@@ -90,46 +62,19 @@ const RouteOptimizerContent = () => {
                 }
             } catch (e) {
                 console.error("Failed to parse tasks from URL", e);
-                setRouteSteps(initialRouteSteps);
+                setRouteSteps([]);
             }
+        } else {
+            setRouteSteps([]);
         }
-        // If no ?tasks param at all, keep initialRouteSteps as demo data
     }, [searchParams]);
 
     const handleOptimizeRoute = () => {
         setIsOptimizing(true);
         // Simulate API call for route optimization
         setTimeout(() => {
-            const optimizedSteps: RouteStep[] = [
-                {
-                    id: 1,
-                    client: 'Residência Silva - Poda',
-                    address: 'Rua das Azaleias, 123',
-                    time: '08:00',
-                    duration: '1h 30m serviço',
-                    distance: '0 km',
-                    type: 'stop'
-                },
-                {
-                    id: 2,
-                    client: 'Condomínio Solar - Adubação',
-                    address: 'Av. Central, 900',
-                    time: '09:45',
-                    duration: '2h 00m serviço',
-                    transition: '1.2 km • 5 min de deslocamento',
-                    type: 'stop'
-                },
-                {
-                    id: 3,
-                    client: 'Parque das Flores - Paisagismo',
-                    address: 'Praça da Liberdade, S/N',
-                    time: '12:00',
-                    duration: '1h 00m serviço',
-                    transition: '3.0 km • 10 min de deslocamento',
-                    type: 'stop'
-                }
-            ];
-            setRouteSteps(optimizedSteps);
+            const sorted = [...routeSteps].sort((a, b) => a.time.localeCompare(b.time));
+            setRouteSteps(sorted);
             setIsOptimizing(false);
             setIsOptimized(true);
         }, 2000);

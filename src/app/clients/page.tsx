@@ -14,11 +14,7 @@ export type Client = {
     notes?: string;
 };
 
-const initialClients: Client[] = [
-    { id: 1, name: 'Alice Johnson', phone: '11999999999', email: 'alice@example.com', address: 'Rua das Flores, 123', lastVisit: '2 dias atrás', notes: 'Gosta de flores amarelas.' },
-    { id: 2, name: 'Smith Estate', phone: '11888888888', email: 'contact@smithestate.com', address: 'Av. Paulista, 1000', lastVisit: '1 semana atrás', notes: 'Contato apenas comercial.' },
-    { id: 3, name: 'Roberto Silva', phone: '11777777777', email: 'roberto@gmail.com', address: 'Rua Augusta, 500', lastVisit: 'Ontem', notes: 'Cão bravo no quintal.' },
-];
+const initialClients: Client[] = [];
 
 export default function ClientContacts() {
     const [searchTerm, setSearchTerm] = useState('');
@@ -115,6 +111,17 @@ export default function ClientContacts() {
 
             {/* Client List */}
             <div className="flex-1 overflow-y-auto px-4 space-y-3 pb-24">
+                {clients.length === 0 && !searchTerm && (
+                    <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+                        <span className="material-symbols-outlined text-6xl text-primary/30">person_add</span>
+                        <p className="text-lg font-semibold text-slate-500 dark:text-slate-400">Nenhum cliente cadastrado</p>
+                        <p className="text-sm text-slate-400 dark:text-slate-500 max-w-xs">Cadastre seu primeiro cliente para começar a gerenciar seus serviços.</p>
+                        <button onClick={handleOpenAddModal} className="mt-2 bg-primary text-background-dark font-bold py-3 px-8 rounded-xl flex items-center gap-2 text-base active:scale-95 transition-transform shadow-lg">
+                            <span className="material-symbols-outlined">person_add</span>
+                            Cadastrar Cliente
+                        </button>
+                    </div>
+                )}
                 {filteredClients.map((client) => (
                     <div key={client.id} onClick={() => handleOpenViewModal(client)} className="flex gap-4 p-4 rounded-xl border border-primary/10 bg-primary/5 hover:bg-primary/10 transition-colors justify-between items-center group relative cursor-pointer active:scale-[0.99] shadow-sm">
                         <div className="flex items-start gap-4 w-full">

@@ -9,7 +9,7 @@ const workSans = Work_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Garden Dante",
+  title: "Magic Garden",
   description: "O app do jardineiro",
 };
 

@@ -4,8 +4,25 @@ import { useState, useEffect } from 'react';
 import { Bell, Sun, Scissors, Trees, QrCode, MapPin, ChevronRight, Cloud, CloudRain, Snowflake, CloudFog, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 export default function Home() {
+  const router = useRouter();
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        router.replace('/login');
+      } else {
+        setAuthChecked(true);
+      }
+    });
+    return () => unsubscribe();
+  }, [router]);
+
   const [weatherData, setWeatherData] = useState<{ temp: number; desc: string; city: string; icon: string; loading: boolean; error: boolean }>({
     temp: 25,
     desc: 'Buscando clima...',
@@ -26,10 +43,21 @@ export default function Home() {
   const todayTasks = tasks.filter(t => t.dateString === todayString);
   const todayPendingTasks = todayTasks.filter(t => t.status !== 'Concluído');
 
-  // Load tasks from localStorage on mount
+  // Load tasks from localStorage on mount (clean old demo data once)
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('gardenDanteTasks');
+      if (!localStorage.getItem('magicGarden_cleaned_v2')) {
+        localStorage.removeItem('magicGardenTasks');
+        localStorage.removeItem('magicGardenHealthHistory');
+        localStorage.removeItem('magicGardenExpenses');
+        localStorage.removeItem('magicGardenStock');
+        localStorage.removeItem('magicGardenTools');
+        localStorage.removeItem('magicGardenToolLogs');
+        localStorage.removeItem('magicGardenMonthlyRevenue');
+        localStorage.setItem('magicGarden_cleaned_v2', '1');
+        return;
+      }
+      const stored = localStorage.getItem('magicGardenTasks');
       if (stored) {
         setTasks(JSON.parse(stored));
       }
@@ -41,7 +69,7 @@ export default function Home() {
   const handleMarkDone = (id: string) => {
     const updated = tasks.map(t => t.id === id ? { ...t, status: 'Concluído' } : t);
     setTasks(updated);
-    localStorage.setItem('gardenDanteTasks', JSON.stringify(updated));
+    localStorage.setItem('magicGardenTasks', JSON.stringify(updated));
   };
 
   useEffect(() => {
@@ -99,17 +127,22 @@ export default function Home() {
     }
   }, []);
 
+  if (!authChecked) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header */}
       <div className="flex items-center p-4 justify-between bg-white dark:bg-[#152e15] shadow-sm z-10 sticky top-0">
-        <Link href="/profile" className="flex size-10 shrink-0 items-center">
-          <div
-            className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10"
-            style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1541888946425-d81bb19480c5?auto=format&fit=crop&q=80&w=150&h=150")' }}
-          ></div>
+        <Link href="/profile" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 border-2 border-primary/30 hover:bg-primary/20 transition-colors">
+          <span className="material-symbols-outlined text-primary text-xl">person</span>
         </Link>
-        <h2 className="text-xl font-bold leading-tight flex-1 text-center">Dashboard</h2>
+        <h2 className="text-xl font-bold leading-tight flex-1 text-center">Magic Garden</h2>
         <Link href="/reminders" className="size-10 flex items-center justify-center rounded-full bg-primary/10 text-primary cursor-pointer hover:bg-primary/20 transition-colors">
           <span className="material-symbols-outlined">notifications</span>
         </Link>
@@ -123,7 +156,7 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
           <div className="relative z-10 h-full flex flex-col justify-end p-5">
             <p className="text-white/70 text-xs font-medium uppercase tracking-wider">Bem-vindo de volta</p>
-            <h2 className="text-white text-2xl font-bold mt-1">Seu Jardim Digital</h2>
+            <h2 className="text-white text-2xl font-bold mt-1">Magic Garden</h2>
             <p className="text-white/60 text-sm mt-1">Gerencie serviços, clientes e plantas em um só lugar.</p>
           </div>
         </div>
@@ -214,38 +247,38 @@ export default function Home() {
                 <span className="material-symbols-outlined text-amber-500">account_balance_wallet</span>
               </div>
               <div className="relative z-10">
-                <p className="text-sm font-bold">Despesas</p>
-                <p className="text-[10px] opacity-50">Controle financeiro</p>
+                <p className="text-sm font-bold">Gestão</p>
+                <p className="text-[10px] opacity-50">Despesas e ferramentas</p>
               </div>
             </Link>
-            <Link href="/species" className="relative flex items-center gap-3 bg-white dark:bg-[#152e15] rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary/30 transition-all active:scale-[0.97] overflow-hidden">
-              <div className="absolute inset-0 bg-cover bg-center opacity-[0.06]" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?w=300&q=80")' }} />
-              <div className="size-10 rounded-lg bg-lime-500/10 flex items-center justify-center shrink-0 relative z-10">
-                <span className="material-symbols-outlined text-lime-500">menu_book</span>
+            <Link href="/calculator" className="relative flex items-center gap-3 bg-white dark:bg-[#152e15] rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary/30 transition-all active:scale-[0.97] overflow-hidden">
+              <div className="absolute inset-0 bg-cover bg-center opacity-[0.06]" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&q=80")' }} />
+              <div className="size-10 rounded-lg bg-cyan-500/10 flex items-center justify-center shrink-0 relative z-10">
+                <span className="material-symbols-outlined text-cyan-500">calculate</span>
               </div>
               <div className="relative z-10">
-                <p className="text-sm font-bold">Espécies</p>
-                <p className="text-[10px] opacity-50">Biblioteca de plantas</p>
+                <p className="text-sm font-bold">Calculadora</p>
+                <p className="text-[10px] opacity-50">Insumos e substratos</p>
               </div>
             </Link>
-            <Link href="/health" className="relative flex items-center gap-3 bg-white dark:bg-[#152e15] rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary/30 transition-all active:scale-[0.97] overflow-hidden">
-              <div className="absolute inset-0 bg-cover bg-center opacity-[0.06]" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?w=300&q=80")' }} />
+            <Link href="/weather-alerts" className="relative flex items-center gap-3 bg-white dark:bg-[#152e15] rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary/30 transition-all active:scale-[0.97] overflow-hidden">
+              <div className="absolute inset-0 bg-cover bg-center opacity-[0.06]" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1504253163759-c23fccaebb55?w=300&q=80")' }} />
               <div className="size-10 rounded-lg bg-sky-500/10 flex items-center justify-center shrink-0 relative z-10">
-                <span className="material-symbols-outlined text-sky-500">monitor_heart</span>
+                <span className="material-symbols-outlined text-sky-500">thunderstorm</span>
               </div>
               <div className="relative z-10">
-                <p className="text-sm font-bold">Saúde</p>
-                <p className="text-[10px] opacity-50">Histórico de plantas</p>
+                <p className="text-sm font-bold">Clima</p>
+                <p className="text-[10px] opacity-50">Alertas severos</p>
               </div>
             </Link>
-            <Link href="/profile" className="relative flex items-center gap-3 bg-white dark:bg-[#152e15] rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary/30 transition-all active:scale-[0.97] overflow-hidden">
-              <div className="absolute inset-0 bg-cover bg-center opacity-[0.06]" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1560250097-0b93528c311a?w=300&q=80")' }} />
-              <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 relative z-10">
-                <span className="material-symbols-outlined text-primary">badge</span>
+            <Link href="/training" className="relative flex items-center gap-3 bg-white dark:bg-[#152e15] rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary/30 transition-all active:scale-[0.97] overflow-hidden">
+              <div className="absolute inset-0 bg-cover bg-center opacity-[0.06]" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=300&q=80")' }} />
+              <div className="size-10 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0 relative z-10">
+                <span className="material-symbols-outlined text-purple-500">play_circle</span>
               </div>
               <div className="relative z-10">
-                <p className="text-sm font-bold">Perfil</p>
-                <p className="text-[10px] opacity-50">Portfólio profissional</p>
+                <p className="text-sm font-bold">Treinamento</p>
+                <p className="text-[10px] opacity-50">Vídeos e tutoriais</p>
               </div>
             </Link>
           </div>
