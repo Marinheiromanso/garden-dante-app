@@ -6,6 +6,7 @@ import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, updateProfile, updatePassword, EmailAuthProvider, reauthenticateWithCredential, signOut, type User } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
+import { saveProfilePhoto, getProfilePhoto } from '@/lib/photo-storage';
 
 const PROFILE_KEY = 'magicGardenProfile';
 
@@ -79,6 +80,12 @@ export default function ProfilePage() {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
                 setUser(firebaseUser);
+
+                // Clear corrupted photoURL from Firebase Auth (was truncated base64)
+                if (firebaseUser.photoURL && firebaseUser.photoURL.startsWith('data:') && firebaseUser.photoURL.length < 5000) {
+                    try { await updateProfile(firebaseUser, { photoURL: '' }); } catch { /* ignore */ }
+                }
+
                 // Try loading from Firestore first, fallback to localStorage
                 try {
                     const docSnap = await getDoc(doc(db, 'users', firebaseUser.uid));
@@ -91,10 +98,16 @@ export default function ProfilePage() {
                             city: data.city || '',
                             bio: data.bio || '',
                             specialties: data.specialties || '',
-                            photoURL: firebaseUser.photoURL || data.photoURL || '',
+                            photoURL: data.photoURL || '',
                         };
                         setProfile(loaded);
                         setEditForm(loaded);
+                        // Sync to localStorage so home page can read it
+                        localStorage.setItem(PROFILE_KEY, JSON.stringify(loaded));
+                        if (loaded.photoURL) {
+                            saveProfilePhoto(loaded.photoURL).catch(() => {});
+                            try { localStorage.setItem('magicGardenPhoto', loaded.photoURL); } catch { /* ignore */ }
+                        }
                         return;
                     }
                 } catch { /* Firestore offline, use localStorage */ }
@@ -109,7 +122,7 @@ export default function ProfilePage() {
                             ...parsed,
                             name: parsed.name || firebaseUser.displayName || '',
                             email: firebaseUser.email || '',
-                            photoURL: firebaseUser.photoURL || parsed.photoURL || '',
+                            photoURL: parsed.photoURL || '',
                         };
                         setProfile(loaded);
                         setEditForm(loaded);
@@ -122,7 +135,7 @@ export default function ProfilePage() {
                     ...defaultProfile,
                     name: firebaseUser.displayName || '',
                     email: firebaseUser.email || '',
-                    photoURL: firebaseUser.photoURL || '',
+                    photoURL: '',
                 };
                 setProfile(loaded);
                 setEditForm(loaded);
@@ -155,7 +168,6 @@ export default function ProfilePage() {
             if (user) {
                 await updateProfile(user, {
                     displayName: editForm.name,
-                    photoURL: editForm.photoURL || null,
                 });
                 // Save to Firestore
                 try {
@@ -172,6 +184,7 @@ export default function ProfilePage() {
             }
             // Always save to localStorage as backup
             localStorage.setItem(PROFILE_KEY, JSON.stringify(editForm));
+            if (editForm.photoURL) localStorage.setItem('magicGardenPhoto', editForm.photoURL);
             setProfile(editForm);
             setEditMode(false);
             setSuccess('Perfil atualizado com sucesso!');
@@ -221,9 +234,14 @@ export default function ProfilePage() {
             setEditForm(f => ({ ...f, photoURL: base64 }));
             setProfile(p => ({ ...p, photoURL: base64 }));
 
-            // Save to Firestore + localStorage
+            // Save photo to IndexedDB (reliable for large data)
+            await saveProfilePhoto(base64);
+
+            // Save photo to dedicated localStorage key
+            try { localStorage.setItem('magicGardenPhoto', base64); } catch { /* quota exceeded */ }
+
+            // Save to Firestore + localStorage profile
             if (user) {
-                await updateProfile(user, { photoURL: base64.slice(0, 1000) });
                 try {
                     await setDoc(doc(db, 'users', user.uid), { photoURL: base64, updatedAt: new Date().toISOString() }, { merge: true });
                 } catch { /* Firestore offline */ }

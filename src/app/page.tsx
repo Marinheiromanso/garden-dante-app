@@ -7,10 +7,34 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { getProfilePhoto } from '@/lib/photo-storage';
+
+const PROFILE_KEY = 'magicGardenProfile';
 
 export default function Home() {
   const router = useRouter();
   const [authChecked, setAuthChecked] = useState(false);
+  const [profilePhoto, setProfilePhoto] = useState('');
+
+  // Load profile photo on mount
+  useEffect(() => {
+    getProfilePhoto()
+      .then(photo => { if (photo) setProfilePhoto(photo); })
+      .catch(() => {
+        // Fallback to localStorage
+        try {
+          const photo = localStorage.getItem('magicGardenPhoto');
+          if (photo) { setProfilePhoto(photo); return; }
+        } catch { /* ignore */ }
+        try {
+          const stored = localStorage.getItem(PROFILE_KEY);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed.photoURL) setProfilePhoto(parsed.photoURL);
+          }
+        } catch { /* ignore */ }
+      });
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -139,8 +163,12 @@ export default function Home() {
     <div className="flex flex-col min-h-screen">
       {/* Header */}
       <div className="flex items-center p-4 justify-between bg-white dark:bg-[#152e15] shadow-sm z-10 sticky top-0">
-        <Link href="/profile" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 border-2 border-primary/30 hover:bg-primary/20 transition-colors">
-          <span className="material-symbols-outlined text-primary text-xl">person</span>
+        <Link href="/profile" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 border-2 border-primary/30 hover:bg-primary/20 transition-colors overflow-hidden">
+          {profilePhoto ? (
+            <img src={profilePhoto} alt="Perfil" className="size-full object-cover rounded-full" />
+          ) : (
+            <span className="material-symbols-outlined text-primary text-xl">person</span>
+          )}
         </Link>
         <h2 className="text-xl font-bold leading-tight flex-1 text-center">Magic Garden</h2>
         <Link href="/reminders" className="size-10 flex items-center justify-center rounded-full bg-primary/10 text-primary cursor-pointer hover:bg-primary/20 transition-colors">
