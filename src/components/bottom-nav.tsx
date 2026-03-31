@@ -15,6 +15,8 @@ const navItems = [
 export function BottomNav() {
     const pathname = usePathname();
 
+    if (pathname === '/landing') return null;
+
     return (
         <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#102210] border-t border-slate-200 dark:border-primary/20 pb-safe z-50">
             <div className="flex max-w-2xl mx-auto h-16 items-center">

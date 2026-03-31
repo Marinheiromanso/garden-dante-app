@@ -5,10 +5,8 @@ import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, updateProfile, updatePassword, EmailAuthProvider, reauthenticateWithCredential, signOut, type User } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { cn } from '@/lib/utils';
+import { cn, PROFILE_KEY } from '@/lib/utils';
 import { saveProfilePhoto, getProfilePhoto } from '@/lib/photo-storage';
-
-const PROFILE_KEY = 'magicGardenProfile';
 
 function AlertBanner({ message, type, className }: { message: string; type: 'success' | 'error'; className?: string }) {
     const isSuccess = type === 'success';

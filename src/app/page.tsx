@@ -8,8 +8,7 @@ import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getProfilePhoto } from '@/lib/photo-storage';
-
-const PROFILE_KEY = 'magicGardenProfile';
+import { PROFILE_KEY, formatDateString, cleanOldDemoData } from '@/lib/utils';
 
 export default function Home() {
   const router = useRouter();
@@ -59,10 +58,6 @@ export default function Home() {
   // Task state from localStorage
   const [tasks, setTasks] = useState<any[]>([]);
 
-  const formatDateString = (date: Date) => {
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  };
-
   const todayString = formatDateString(new Date());
   const todayTasks = tasks.filter(t => t.dateString === todayString);
   const todayPendingTasks = todayTasks.filter(t => t.status !== 'Concluído');
@@ -70,17 +65,7 @@ export default function Home() {
   // Load tasks from localStorage on mount (clean old demo data once)
   useEffect(() => {
     try {
-      if (!localStorage.getItem('magicGarden_cleaned_v2')) {
-        localStorage.removeItem('magicGardenTasks');
-        localStorage.removeItem('magicGardenHealthHistory');
-        localStorage.removeItem('magicGardenExpenses');
-        localStorage.removeItem('magicGardenStock');
-        localStorage.removeItem('magicGardenTools');
-        localStorage.removeItem('magicGardenToolLogs');
-        localStorage.removeItem('magicGardenMonthlyRevenue');
-        localStorage.setItem('magicGarden_cleaned_v2', '1');
-        return;
-      }
+      cleanOldDemoData();
       const stored = localStorage.getItem('magicGardenTasks');
       if (stored) {
         setTasks(JSON.parse(stored));

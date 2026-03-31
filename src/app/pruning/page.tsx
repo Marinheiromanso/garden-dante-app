@@ -3,12 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Calendar as CalendarIcon, Scissors, ChevronLeft, ChevronRight, Plus, Info, AlertTriangle, CheckCircle2, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
-
-// Helper for 'YYYY-MM-DD'
-const formatDateString = (date: Date) => {
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-};
+import { cn, formatDateString, cleanOldDemoData } from '@/lib/utils';
 
 const days = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 const currentMonth = 'Junho 2024';
@@ -35,20 +30,10 @@ export default function PruningSchedule() {
         setSelectedDate(new Date());
         // Clean old demo data once, then load tasks
         try {
-            if (!localStorage.getItem('magicGarden_cleaned_v2')) {
-                localStorage.removeItem('magicGardenTasks');
-                localStorage.removeItem('magicGardenHealthHistory');
-                localStorage.removeItem('magicGardenExpenses');
-                localStorage.removeItem('magicGardenStock');
-                localStorage.removeItem('magicGardenTools');
-                localStorage.removeItem('magicGardenToolLogs');
-                localStorage.removeItem('magicGardenMonthlyRevenue');
-                localStorage.setItem('magicGarden_cleaned_v2', '1');
-            } else {
-                const stored = localStorage.getItem('magicGardenTasks');
-                if (stored) {
-                    setTasks(JSON.parse(stored));
-                }
+            cleanOldDemoData();
+            const stored = localStorage.getItem('magicGardenTasks');
+            if (stored) {
+                setTasks(JSON.parse(stored));
             }
         } catch (e) {
             console.warn('Failed to load tasks from localStorage', e);
